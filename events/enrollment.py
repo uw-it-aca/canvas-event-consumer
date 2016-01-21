@@ -39,6 +39,7 @@ class Enrollment(object):
         """
         self._settings = settings
         self._keys = self._settings.get('KEYS', {})
+        self._message = message
         self._header = message['Header']
         self._body = message['Body']
         if self._header['MessageType'] != self._enrollmentMessageType:
@@ -133,25 +134,30 @@ class Enrollment(object):
             raise EnrollmentException('Invalid signature: ' + str(err))
 
     def _extract(self):
-        t = self._header['Encoding']
-        if str(t).lower() != 'base64':
-            raise EnrollmentException('Unkown encoding: ' + t)
-
-        t = self._header['Algorithm']
-        if str(t).lower() != 'aes128cbc':
-            raise EnrollmentException('Unsupported algorithm: ' + t)
-
-        t = self._header['KeyId']
-        key = self._keys[t]
-        if key is None:
-            raise EnrollmentException('Invalid KeyId : ' + t)
-
         try:
+            t = self._header['Encoding']
+            if str(t).lower() != 'base64':
+                raise EnrollmentException('Unkown encoding: ' + t)
+
+            t = self._header.get('Algorithm', 'aes128cbc')
+            if str(t).lower() != 'aes128cbc':
+                raise EnrollmentException('Unsupported algorithm: ' + t)
+
+            t = self._header['KeyId']
+            key = self._keys.get(t, None)
+            if key is None:
+                # no valid events
+                self._log.error("Invalid KeyId: %s\nDROPPING: %s", (t, self._message))
+                return { "Events": [] }
+
             # regex removes cruft around JSON
             rx = re.compile(r'[^{]*({.*})[^}]*')
             cipher = aes128cbc(b64decode(key), b64decode(self._header['IV']))
             b = cipher.decrypt(b64decode(self._body))
             return(json.loads(rx.sub(r'\g<1>', b)))
+        except KeyError as err:
+            self._log.error("Key Error: %s\nHEADER: %s" % (err, self._header));
+            raise
         except CryptoException, err:
             raise EnrollmentException('Cannot decrypt: ' + str(err))
         except Exception, err:
