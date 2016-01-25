@@ -170,6 +170,11 @@ class Enrollment(object):
             raise
         except CryptoException as err:
             raise EnrollmentException('Cannot decrypt: %s' % (err))
+        except DataFailureException as err:
+            msg = "Request failure for %s: %s (%s)" % (
+                self.url, self.msg, self.status)
+            self._log.error(msg)
+            raise EnrollmentException(msg)
         except Exception as err:
             raise EnrollmentException('Cannot read: %s' % (err))
 
