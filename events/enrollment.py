@@ -19,9 +19,6 @@ from aws_message.crypto import aes128cbc, Signature, CryptoException
 class EnrollmentException(Exception):
     pass
 
-class EnrollmentDecryptionException(Exception):
-    pass
-
 
 class Enrollment(object):
     """
