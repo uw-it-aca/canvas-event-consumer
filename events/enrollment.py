@@ -50,8 +50,8 @@ class Enrollment(object):
         self._body = message['Body']
         self._re_guid = re.compile(r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
         if self._header['MessageType'] != self._enrollmentMessageType:
-            raise EnrollmentException('Unknown Message Type: '
-                                      + str(self._header['MessageType']))
+            raise EnrollmentException(
+                'Unknown Message Type: %s' % (self._header['MessageType']))
 
         self._log = getLogger(__name__)
 
@@ -110,8 +110,7 @@ class Enrollment(object):
             try:
                 loader.load_enrollment(enrollment)
             except Exception as err:
-                raise EnrollmentException('Load enrollment failed: %s' % (
-                    str(err)))
+                raise EnrollmentException('Load enrollment failed: %s' % (err))
 
         self._recordSuccess(enrollments)
 
@@ -136,9 +135,9 @@ class Enrollment(object):
             Signature(sig_conf).validate(to_sign.encode('ascii'),
                                          b64decode(self._header['Signature']))
         except CryptoException as err:
-            raise EnrollmentException('Crypto: ' + str(err))
+            raise EnrollmentException('Crypto: %s' % (err))
         except Exception as err:
-            raise EnrollmentException('Invalid signature: ' + str(err))
+            raise EnrollmentException('Invalid signature: %s' % (err))
 
     def _extract(self):
         try:
@@ -158,14 +157,14 @@ class Enrollment(object):
                 body = self._decryptBody(key)
             else:
                 try:
-                    key = self._kws.get_current_key(self._header['MessageType']).key
+                    key = self._kws.get_current_key(
+                        self._header['MessageType']).key
                     body = self._decryptBody(key)
                 except CryptoException as err:
-                    # stale key?
-                    RestClientsCache().deleteCache(
-                        'kws', '/key/v1/type/%s/encryption/current' % \
+                    RestClientsCache().delete_cached_kws_current_key(
                         self._header['MessageType'])
-                    key = self._kws.get_current_key(self._header['MessageType']).key
+                    key = self._kws.get_current_key(
+                        self._header['MessageType']).key
                     body = self._decryptBody(key)
 
             return(json.loads(rx.sub(r'\g<1>', body)))
@@ -173,9 +172,9 @@ class Enrollment(object):
             self._log.error("Key Error: %s\nHEADER: %s" % (err, self._header));
             raise
         except CryptoException as err:
-            raise EnrollmentException('Cannot decrypt: ' + str(err))
+            raise EnrollmentException('Cannot decrypt: %s' % (err))
         except Exception as err:
-            raise EnrollmentException('Cannot read: ' + str(err))
+            raise EnrollmentException('Cannot read: %s' % (err))
 
     def _decryptBody(self, key):
         cipher = aes128cbc(b64decode(key), b64decode(self._header['IV']))
