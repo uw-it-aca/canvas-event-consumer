@@ -157,7 +157,7 @@ class Enrollment(object):
                     key = self._kws.get_current_key(
                         self._header['MessageType']).key
                     body = self._decryptBody(key)
-                except CryptoException as err:
+                except (ValueError, CryptoException) as err:
                     RestClientsCache().delete_cached_kws_current_key(
                         self._header['MessageType'])
                     key = self._kws.get_current_key(
@@ -168,7 +168,7 @@ class Enrollment(object):
         except KeyError as err:
             self._log.error("Key Error: %s\nHEADER: %s" % (err, self._header));
             raise
-        except CryptoException as err:
+        except (ValueError, CryptoException) as err:
             raise EnrollmentException('Cannot decrypt: %s' % (err))
         except DataFailureException as err:
             msg = "Request failure for %s: %s (%s)" % (
