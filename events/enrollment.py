@@ -157,6 +157,9 @@ class Enrollment(object):
                     key = self._kws.get_current_key(
                         self._header['MessageType']).key
                     body = self._decryptBody(key)
+                    # look like json?
+                    if not re.match(r'^\s*{.+}\s*$', body):
+                        raise CryptoException()
                 except (ValueError, CryptoException) as err:
                     RestClientsCache().delete_cached_kws_current_key(
                         self._header['MessageType'])
