@@ -8,7 +8,10 @@ from django.conf import settings
 from django.utils.log import getLogger
 from sis_provisioner.loader import Loader
 from sis_provisioner.models import Enrollment as EnrollmentModel
+from sis_provisioner.cache import RestClientsCache
 from restclients.models.sws import Term, Section
+from restclients.kws import KWS
+from restclients.exceptions import DataFailureException
 from events.models import EnrollmentLog
 from aws_message.crypto import aes128cbc, Signature, CryptoException
 
@@ -37,14 +40,15 @@ class Enrollment(object):
 
         Raises EnrollmentException
         """
+        self._kws = KWS()
         self._settings = settings
-        self._keys = self._settings.get('KEYS', {})
         self._message = message
         self._header = message['Header']
         self._body = message['Body']
+        self._re_guid = re.compile(r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
         if self._header['MessageType'] != self._enrollmentMessageType:
-            raise EnrollmentException('Unknown Message Type: '
-                                      + str(self._header['MessageType']))
+            raise EnrollmentException(
+                'Unknown Message Type: %s' % (self._header['MessageType']))
 
         self._log = getLogger(__name__)
 
@@ -102,9 +106,8 @@ class Enrollment(object):
         for enrollment in enrollments:
             try:
                 loader.load_enrollment(enrollment)
-            except Exception, err:
-                raise EnrollmentException('Load enrollment failed: %s' % (
-                    str(err)))
+            except Exception as err:
+                raise EnrollmentException('Load enrollment failed: %s' % (err))
 
         self._recordSuccess(enrollments)
 
@@ -128,10 +131,10 @@ class Enrollment(object):
         try:
             Signature(sig_conf).validate(to_sign.encode('ascii'),
                                          b64decode(self._header['Signature']))
-        except CryptoException, err:
-            raise EnrollmentException('Crypto: ' + str(err))
-        except Exception, err:
-            raise EnrollmentException('Invalid signature: ' + str(err))
+        except CryptoException as err:
+            raise EnrollmentException('Crypto: %s' % (err))
+        except Exception as err:
+            raise EnrollmentException('Invalid signature: %s' % (err))
 
     def _extract(self):
         try:
@@ -143,25 +146,44 @@ class Enrollment(object):
             if str(t).lower() != 'aes128cbc':
                 raise EnrollmentException('Unsupported algorithm: ' + t)
 
-            t = self._header['KeyId']
-            key = self._keys.get(t, None)
-            if key is None:
-                # no valid events
-                self._log.error("Invalid KeyId: %s\nDROPPING: %s", (t, self._message))
-                return { "Events": [] }
-
             # regex removes cruft around JSON
             rx = re.compile(r'[^{]*({.*})[^}]*')
-            cipher = aes128cbc(b64decode(key), b64decode(self._header['IV']))
-            b = cipher.decrypt(b64decode(self._body))
-            return(json.loads(rx.sub(r'\g<1>', b)))
+            key_id = self._header['KeyId']
+            if key_id and re.match(self._re_guid, key_id):
+                key = self._kws.get_key(key_id).key
+                body = self._decryptBody(key)
+            else:
+                try:
+                    key = self._kws.get_current_key(
+                        self._header['MessageType']).key
+                    body = self._decryptBody(key)
+                    # look like json?
+                    if not re.match(r'^\s*{.+}\s*$', body):
+                        raise CryptoException()
+                except (ValueError, CryptoException) as err:
+                    RestClientsCache().delete_cached_kws_current_key(
+                        self._header['MessageType'])
+                    key = self._kws.get_current_key(
+                        self._header['MessageType']).key
+                    body = self._decryptBody(key)
+
+            return(json.loads(rx.sub(r'\g<1>', body)))
         except KeyError as err:
             self._log.error("Key Error: %s\nHEADER: %s" % (err, self._header));
             raise
-        except CryptoException, err:
-            raise EnrollmentException('Cannot decrypt: ' + str(err))
-        except Exception, err:
-            raise EnrollmentException('Cannot read: ' + str(err))
+        except (ValueError, CryptoException) as err:
+            raise EnrollmentException('Cannot decrypt: %s' % (err))
+        except DataFailureException as err:
+            msg = "Request failure for %s: %s (%s)" % (
+                self.url, self.msg, self.status)
+            self._log.error(msg)
+            raise EnrollmentException(msg)
+        except Exception as err:
+            raise EnrollmentException('Cannot read: %s' % (err))
+
+    def _decryptBody(self, key):
+        cipher = aes128cbc(b64decode(key), b64decode(self._header['IV']))
+        return cipher.decrypt(b64decode(self._body))
 
     def _recordSuccess(self, enrollments):
         minute = int(floor(time() / 60))
