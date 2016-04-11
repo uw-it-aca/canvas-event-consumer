@@ -212,16 +212,23 @@ class UWGroupDispatch(Dispatch):
 
     def _update_group_member(self, group, member, is_deleted):
         # validity is assumed if the course model exists
+        if member.is_uwnetid():
+            user_id = member.name
+        elif member.is_eppn():
+            user_id = self._user_policy.valid_gmail_id(member.name)
+        else:
+            return
+
         try:
             (cm, created) = CourseMemberModel.objects.get_or_create(
-                name=member.name, member_type=member.member_type,
+                name=user_id, member_type=member.member_type,
                 course_id=group.course_id, role=group.role)
         except CourseMemberModel.MultipleObjectsReturned:
             models = CourseMemberModel.objects.filter(
-                name=member.name, member_type=member.member_type,
+                name=user_id, member_type=member.member_type,
                 course_id=group.course_id, role=group.role)
             self._log.debug('MULTIPLE (%s): %s in %s as %s'
-                            % (len(models), member.name,
+                            % (len(models), user_id,
                                group.course_id, group.role))
             cm = models[0]
             created = False
@@ -242,7 +249,7 @@ class UWGroupDispatch(Dispatch):
 
         self._log.info('groups: %s %s to %s as %s' % (
             'deleted' if is_deleted else 'active',
-            member.name, group.course_id, group.role))
+            user_id, group.course_id, group.role))
 
     def _user_in_member_group(self, group, member):
         if self._has_member_groups(group):
