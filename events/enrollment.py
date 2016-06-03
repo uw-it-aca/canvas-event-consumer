@@ -45,7 +45,8 @@ class Enrollment(object):
         self._message = message
         self._header = message['Header']
         self._body = message['Body']
-        self._re_guid = re.compile(r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
+        self._re_guid = re.compile(
+            r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
         if self._header['MessageType'] != self._enrollmentMessageType:
             raise EnrollmentException(
                 'Unknown Message Type: %s' % (self._header['MessageType']))
@@ -72,13 +73,17 @@ class Enrollment(object):
                 is_primary_section=True
             )
 
-            if 'PrimarySection' in event and 'Course' in event['PrimarySection']:
+            if ('PrimarySection' in event and
+                    'Course' in event['PrimarySection']):
                 primary_course = event['PrimarySection']['Course']
                 if primary_course:
                     section.is_primary_section = False
-                    section.primary_section_curriculum_abbr = primary_course['CurriculumAbbreviation']
-                    section.primary_section_course_number = primary_course['CourseNumber']
-                    section.primary_section_id = event['PrimarySection']['SectionID']
+                    section.primary_section_curriculum_abbr = \
+                        primary_course['CurriculumAbbreviation']
+                    section.primary_section_course_number = \
+                        primary_course['CourseNumber']
+                    section.primary_section_id = \
+                        event['PrimarySection']['SectionID']
 
             code = event['Action']['Code'].upper()
 
@@ -169,7 +174,8 @@ class Enrollment(object):
 
             return(json.loads(rx.sub(r'\g<1>', body)))
         except KeyError as err:
-            self._log.error("Key Error: %s\nHEADER: %s" % (err, self._header));
+            self._log.error(
+                "Key Error: %s\nHEADER: %s" % (err, self._header))
             raise
         except (ValueError, CryptoException) as err:
             raise EnrollmentException('Cannot decrypt: %s' % (err))
@@ -197,6 +203,7 @@ class Enrollment(object):
         e.save()
 
         if e.event_count <= 5:
-            limit = self._settings.get('EVENT_COUNT_PRUNE_AFTER_DAY', 7) * 24 * 60
+            limit = self._settings.get(
+                'EVENT_COUNT_PRUNE_AFTER_DAY', 7) * 24 * 60
             prune = minute - limit
             EnrollmentLog.objects.filter(minute__lt=prune).delete()
