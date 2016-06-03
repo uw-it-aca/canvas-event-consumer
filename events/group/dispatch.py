@@ -188,8 +188,9 @@ class UWGroupDispatch(Dispatch):
     def _update_group_member_group(self, group, member_group, is_deleted):
         try:
             # validity is confirmed by act_as
-            (valid, invalid, member_groups) = self._group_policy.get_effective_members(
-                member_group, act_as=group.added_by)
+            (valid, invalid, member_groups) = \
+                self._group_policy.get_effective_members(
+                    member_group, act_as=group.added_by)
         except GroupNotFoundException as err:
             GroupMemberGroupModel.objects \
                                  .filter(group_id=member_group) \
@@ -283,7 +284,8 @@ class UWGroupDispatch(Dispatch):
             params = {'user_id': self._enrollments.sis_user_id(user.reg_id)}
             for e in self._enrollments.get_enrollments_for_course_by_sis_id(
                     group.course_id, params=params):
-                if e.sis_section_id != self._course_policy.group_section_sis_id(group.course_id):
+                if e.sis_section_id != \
+                   self._course_policy.group_section_sis_id(group.course_id):
                     return True
         except DataFailureException as err:
             if err.status == 404:
@@ -318,7 +320,9 @@ class CourseGroupDispatch(Dispatch):
     """
     def mine(self, group):
         course = ('course_' in group and re.match(
-            r'^course_(20[0-9]{2})([a-z]{3})-([a-z\-]+)([0-9]{3})([a-z][a-z0-9]?)$', group))
+            (r'^course_(20[0-9]{2})'
+             + '([a-z]{3})-([a-z\-]+)'
+             + '([0-9]{3})([a-z][a-z0-9]?)$'), group))
         if course:
             self._course_sis_id = '-'.join([
                 course.group(1),
