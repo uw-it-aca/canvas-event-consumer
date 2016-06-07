@@ -40,8 +40,10 @@ class EventListView(RESTDispatch):
                             end_sample = t
 
             events = {
-                'start': strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(start_sample * 60)),
-                'end': strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(end_sample * 60)),
+                'start': strftime("%Y-%m-%dT%H:%M:%SZ",
+                                  gmtime(start_sample * 60)),
+                'end': strftime("%Y-%m-%dT%H:%M:%SZ",
+                                gmtime(end_sample * 60)),
                 'points': [0 for i in xrange((end_sample - start_sample + 1))]
             }
 

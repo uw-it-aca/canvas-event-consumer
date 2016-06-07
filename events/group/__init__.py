@@ -10,7 +10,6 @@ from events.group.dispatch import UWGroupDispatch, Dispatch
 from aws_message.extract import ExtractException
 
 
-
 class GroupException(Exception):
     pass
 
@@ -56,7 +55,7 @@ class Group(object):
             self._dispatch = dispatch(config, message)
             if self._dispatch.mine(self._groupname):
                 break
-            
+
     def process(self):
         try:
             n = self._dispatch.run(self._action, self._groupname)
@@ -76,8 +75,6 @@ class Group(object):
         e.save()
 
         if e.event_count <= 5:
-            prune = minute - (self._settings.get('EVENT_COUNT_PRUNE_AFTER_DAY', 7) * 24 * 60)
+            prune = minute - (self._settings.get(
+                'EVENT_COUNT_PRUNE_AFTER_DAY', 7) * 24 * 60)
             GroupLog.objects.filter(minute__lt=prune).delete()
-
-
-
