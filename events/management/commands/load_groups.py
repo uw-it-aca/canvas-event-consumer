@@ -12,7 +12,7 @@ from math import floor
 class GroupsProvisionerCommand(SISProvisionerCommand):
     def health_check(self):
         # squawk if no new events in the last 12 hours
-        acceptable_silence = (12 * 60)
+        acceptable_silence = (24 * 60)
         recent = GroupLog.objects.all().order_by('-minute')[:1]
         if len(recent):
             delta = int(floor(time() / 60)) - recent[0].minute
