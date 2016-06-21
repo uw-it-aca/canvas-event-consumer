@@ -2,7 +2,8 @@ from django.core.management.base import CommandError
 from django.conf import settings
 from sis_provisioner.management.commands import SISProvisionerCommand
 from aws_message.gather import Gather, GatherException
-from events.enrollment import Enrollment, EnrollmentException
+from events.enrollment import Enrollment
+from events import EventException
 from events.models import EnrollmentLog
 from time import time
 from math import floor
@@ -27,8 +28,7 @@ class Command(EnrollmentProvisionerCommand):
 
     def handle(self, *args, **options):
         try:
-            Gather(settings.AWS_SQS.get('ENROLLMENT'),
-                   Enrollment, EnrollmentException).gather_events()
+            Gather(processor=Enrollment).gather_events()
             self.update_job()
         except GatherException as err:
             raise CommandError(err)
