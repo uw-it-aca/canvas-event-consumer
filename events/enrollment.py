@@ -61,6 +61,8 @@ class Enrollment(EventBase):
                 'UWRegID': event['Person']['UWRegID'],
                 'Status': status,
                 'LastModified': dateutil.parser.parse(event['LastModified']),
+                'Auditor': event['Auditor'],
+                'RequestDate': dateutil.parser.parse(event['RequestDate']),
                 'InstructorUWRegID': event['Instructor']['UWRegID'] if (
                     'Instructor' in event and event['Instructor']
                     and 'UWRegID' in event['Instructor']) else None
