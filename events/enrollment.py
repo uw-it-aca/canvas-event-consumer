@@ -6,6 +6,11 @@ import dateutil.parser
 
 
 class Enrollment(EventBase):
+    """
+    Collects enrollment event described by
+    https://wiki.cac.washington.edu/display/StudentEvents/UW+Course+Enrollment+v2
+    """
+
     SETTINGS_NAME = 'ENROLLMENT_V2'
     EXCEPTION_CLASS = EventException
 
@@ -45,10 +50,17 @@ class Enrollment(EventBase):
                     section.primary_section_id = \
                         event['PrimarySection']['SectionID']
 
+            # Canvas "active" corresponds to Action codes:
+            #   "A" == ADDED and
+            #   "S" == STANDBY (EO only status)
             code = event['Action']['Code'].upper()
-
             if code == 'A':
                 status = EnrollmentModel.ACTIVE_STATUS
+            elif code = 'S':
+                status = EnrollmentModel.ACTIVE_STATUS
+                self._log.debug("Add standby %s to %s" % (
+                    event['Person']['UWRegID'],
+                    section.canvas_section_sis_id()))
             elif code == 'D':
                 status = EnrollmentModel.DELETED_STATUS
             else:
