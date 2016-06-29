@@ -5,7 +5,7 @@ from restclients.models.sws import Term, Section
 from dateutil.parser import parse as date_parse
 
 
-class UnknownActionCodeException(Exception):
+class UnhandledActionCodeException(Exception):
     pass
 
 
@@ -66,7 +66,7 @@ class Enrollment(EventBase):
                 }
 
                 enrollments.append(data)
-            except UnknownActionCodeException:
+            except UnhandledActionCodeException:
                 self._log.warning("Got %s for %s at %s" % (
                     event['Action']['Code'],
                     event['Person']['UWRegID'],
@@ -102,4 +102,4 @@ class Enrollment(EventBase):
         if action_code == 'D':
             return EnrollmentModel.DELETED_STATUS
 
-        raise UnknownActionCodeException()
+        raise UnhandledActionCodeException()
