@@ -97,6 +97,7 @@ class Enrollment(EventBase):
             self._log.debug("Add standby %s to %s" % (
                 event['Person']['UWRegID'],
                 section.canvas_section_sis_id()))
+            return EnrollmentModel.ACTIVE_STATUS
 
         if action_code == 'D':
             return EnrollmentModel.DELETED_STATUS
