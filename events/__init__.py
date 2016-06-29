@@ -118,14 +118,13 @@ class EventBase(object):
         except Exception as err:
             raise EnrollmentException('Cannot read: %s' % (err))
 
-    def recordSuccess(self, log_model, events):
+    def recordSuccess(self, log_model, event_count):
         minute = int(floor(time() / 60))
-        count = len(events)
         try:
             e = log_model.objects.get(minute=minute)
-            e.event_count += count
+            e.event_count += event_count
         except log_model.DoesNotExist:
-            e = log_model(minute=minute, event_count=count)
+            e = log_model(minute=minute, event_count=event_count)
 
         e.save()
 

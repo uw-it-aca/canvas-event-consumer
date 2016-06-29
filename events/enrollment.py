@@ -1,8 +1,12 @@
 from sis_provisioner.loader import Loader
-from events import EventBase, EventException
+from events import EventBase, EventException, EnrollmentLog
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from restclients.models.sws import Term, Section
-import dateutil.parser
+from dateutil.parser import parse as date_parse
+
+
+class UnknownActionCodeException(Exception):
+    pass
 
 
 class Enrollment(EventBase):
@@ -27,16 +31,14 @@ class Enrollment(EventBase):
             section_data = event['Section']
             course_data = section_data['Course']
 
-            term = Term(quarter=course_data['Quarter'],
-                        year=course_data['Year'])
-
-            section = Section(
-                term=term,
-                curriculum_abbr=course_data['CurriculumAbbreviation'],
-                course_number=course_data['CourseNumber'],
-                section_id=section_data['SectionID'],
-                is_primary_section=True
-            )
+            section = Section()
+            section.term = Term(quarter=course_data['Quarter'],
+                                year=course_data['Year'])
+            section.curriculum_abbr=course_data['CurriculumAbbreviation']
+            section.course_number=course_data['CourseNumber']
+            section.section_id=section_data['SectionID']
+            section.is_primary_section=True
+            section.linked_section_urls = []
 
             if ('PrimarySection' in event and
                     'Course' in event['PrimarySection']):
@@ -50,43 +52,53 @@ class Enrollment(EventBase):
                     section.primary_section_id = \
                         event['PrimarySection']['SectionID']
 
-            # Canvas "active" corresponds to Action codes:
-            #   "A" == ADDED and
-            #   "S" == STANDBY (EO only status)
-            code = event['Action']['Code'].upper()
-            if code == 'A':
-                status = EnrollmentModel.ACTIVE_STATUS
-            elif code == 'S':
-                status = EnrollmentModel.ACTIVE_STATUS
-                self._log.debug("Add standby %s to %s" % (
-                    event['Person']['UWRegID'],
-                    section.canvas_section_sis_id()))
-            elif code == 'D':
-                status = EnrollmentModel.DELETED_STATUS
-            else:
-                self._log.warning("Got %s for %s at %s" % (
-                    code, event['Person']['UWRegID'], event['LastModified']))
-                return
-
-            data = {
-                'Section': section,
-                'UWRegID': event['Person']['UWRegID'],
-                'Status': status,
-                'LastModified': dateutil.parser.parse(event['LastModified']),
-                'Auditor': event['Auditor'],
-                'RequestDate': dateutil.parser.parse(event['RequestDate']),
-                'InstructorUWRegID': event['Instructor']['UWRegID'] if (
-                    'Instructor' in event and event['Instructor']
-                    and 'UWRegID' in event['Instructor']) else None
-            }
-
-            enrollments.append(data)
-
-        loader = Loader()
-        for enrollment in enrollments:
             try:
-                loader.load_enrollment(enrollment)
-            except Exception as err:
-                raise EventException('Load enrollment failed: %s' % (err))
+                data = {
+                    'Section': section,
+                    'UWRegID': event['Person']['UWRegID'],
+                    'Status': self._enrollment_status(event, section),
+                    'LastModified': date_parse(event['LastModified']),
+                    'Auditor': event['Auditor'],
+                    'RequestDate': date_parse(event['RequestDate']),
+                    'InstructorUWRegID': event['Instructor']['UWRegID'] if (
+                        'Instructor' in event and event['Instructor']
+                        and 'UWRegID' in event['Instructor']) else None
+                }
 
-        self.recordSuccess(EnrollmentLog, enrollments)
+                enrollments.append(data)
+            except UnknownActionCodeException:
+                self._log.warning("Got %s for %s at %s" % (
+                    event['Action']['Code'],
+                    event['Person']['UWRegID'],
+                    event['LastModified']))
+                pass
+
+        enrollment_count = len(enrollments)
+        if enrollment_count:
+            loader = Loader()
+            for enrollment in enrollments:
+                try:
+                    loader.load_enrollment(enrollment)
+                except Exception as err:
+                    raise EventException('Load enrollment failed: %s' % (err))
+
+            self.recordSuccess(EnrollmentLog, enrollment_count)
+
+    def _enrollment_status(self, event, section):
+        # Canvas "active" corresponds to Action codes:
+        #   "A" == ADDED and
+        #   "S" == STANDBY (EO only status)
+        action_code = event['Action']['Code'].upper()
+
+        if action_code == 'A':
+            return EnrollmentModel.ACTIVE_STATUS
+
+        if action_code == 'S':
+            self._log.debug("Add standby %s to %s" % (
+                event['Person']['UWRegID'],
+                section.canvas_section_sis_id()))
+
+        if action_code == 'D':
+            return EnrollmentModel.DELETED_STATUS
+
+        raise UnknownActionCodeException()
