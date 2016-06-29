@@ -56,7 +56,7 @@ class Enrollment(EventBase):
             code = event['Action']['Code'].upper()
             if code == 'A':
                 status = EnrollmentModel.ACTIVE_STATUS
-            elif code = 'S':
+            elif code == 'S':
                 status = EnrollmentModel.ACTIVE_STATUS
                 self._log.debug("Add standby %s to %s" % (
                     event['Person']['UWRegID'],
