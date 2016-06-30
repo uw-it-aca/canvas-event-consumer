@@ -15,12 +15,17 @@ class Enrollment(EventBase):
     https://wiki.cac.washington.edu/display/StudentEvents/UW+Course+Enrollment+v2
     """
 
+    # Enrollment Version 2 settings
     SETTINGS_NAME = 'ENROLLMENT_V2'
     EXCEPTION_CLASS = EventException
 
-    # What we expect in an enrollment message
-    _enrollmentMessageType = 'uw-student-registration-v2'
-    _enrollmentMessageVersion = '2'
+    ## What we expect in a v1 enrollment message
+    #_eventMessageType = 'uw-student-registration'
+    #_eventMessageVersion = '1'
+
+    # What we expect in a v2 enrollment message
+    _eventMessageType = 'uw-student-registration-v2'
+    _eventMessageVersion = '2'
 
     def process(self):
         if self._settings.get('VALIDATE_MSG_SIGNATURE', True):
@@ -58,12 +63,16 @@ class Enrollment(EventBase):
                     'UWRegID': event['Person']['UWRegID'],
                     'Status': self._enrollment_status(event, section),
                     'LastModified': date_parse(event['LastModified']),
-                    'Auditor': event['Auditor'],
-                    'RequestDate': date_parse(event['RequestDate']),
                     'InstructorUWRegID': event['Instructor']['UWRegID'] if (
                         'Instructor' in event and event['Instructor']
                         and 'UWRegID' in event['Instructor']) else None
                 }
+
+                if 'Auditor' in event:
+                    data['Auditor'] = event['Auditor']
+
+                if 'RequestDate' in event:
+                    data['RequestDate'] = date_parse(event['RequestDate'])
 
                 enrollments.append(data)
             except UnhandledActionCodeException:

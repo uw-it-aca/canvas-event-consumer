@@ -18,7 +18,7 @@ class EventException(Exception):
 
 class EventBase(object):
     """
-    UW Course Enrollment Event Handler
+    UW Course Event Handler
     """
 
     _header = None
@@ -26,29 +26,28 @@ class EventBase(object):
 
     def __init__(self, settings, message):
         """
-        UW Enrollment Event object
+        UW Course Event object
 
-        Takes an object representing a UW Course Enrollment Message
+        Takes a dict representing a UW Course Event Message
 
-        Raises EnrollmentException
+        Raises EventException
         """
         self._kws = KWS()
         self._settings = settings
-        self._message = message
         self._header = message['Header']
         self._body = message['Body']
         self._re_guid = re.compile(
             r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
-        if self._header['MessageType'] != self._enrollmentMessageType:
-            raise EnrollmentException(
+        if self._header['MessageType'] != self._eventMessageType:
+            raise EventException(
                 'Unknown Message Type: %s' % (self._header['MessageType']))
 
         self._log = getLogger(__name__)
 
     def validate(self):
         t = self._header['Version']
-        if t != self._enrollmentMessageVersion:
-            raise EnrollmentException('Unknown Version: ' + t)
+        if t != self._eventMessageVersion:
+            raise EventException('Unknown Version: ' + t)
 
         to_sign = self._header['MessageType'] + '\n' \
             + self._header['MessageId'] + '\n' \
@@ -66,19 +65,19 @@ class EventBase(object):
             Signature(sig_conf).validate(to_sign.encode('ascii'),
                                          b64decode(self._header['Signature']))
         except CryptoException as err:
-            raise EnrollmentException('Crypto: %s' % (err))
+            raise EventException('Crypto: %s' % (err))
         except Exception as err:
-            raise EnrollmentException('Invalid signature: %s' % (err))
+            raise EventException('Invalid signature: %s' % (err))
 
     def _extract(self):
         try:
             t = self._header['Encoding']
             if str(t).lower() != 'base64':
-                raise EnrollmentException('Unkown encoding: ' + t)
+                raise EventException('Unkown encoding: ' + t)
 
             t = self._header.get('Algorithm', 'aes128cbc')
             if str(t).lower() != 'aes128cbc':
-                raise EnrollmentException('Unsupported algorithm: ' + t)
+                raise EventException('Unsupported algorithm: ' + t)
 
             # regex removes cruft around JSON
             rx = re.compile(r'[^{]*({.*})[^}]*')
@@ -109,14 +108,14 @@ class EventBase(object):
                 "Key Error: %s\nHEADER: %s" % (err, self._header))
             raise
         except (ValueError, CryptoException) as err:
-            raise EnrollmentException('Cannot decrypt: %s' % (err))
+            raise EventException('Cannot decrypt: %s' % (err))
         except DataFailureException as err:
             msg = "Request failure for %s: %s (%s)" % (
                 err.url, err.msg, err.status)
             self._log.error(msg)
-            raise EnrollmentException(msg)
+            raise EventException(msg)
         except Exception as err:
-            raise EnrollmentException('Cannot read: %s' % (err))
+            raise EventException('Cannot read: %s' % (err))
 
     def recordSuccess(self, log_model, event_count):
         minute = int(floor(time() / 60))
