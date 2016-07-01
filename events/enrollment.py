@@ -27,12 +27,9 @@ class Enrollment(EventBase):
     _eventMessageType = 'uw-student-registration-v2'
     _eventMessageVersion = '2'
 
-    def process(self):
-        if self._settings.get('VALIDATE_MSG_SIGNATURE', True):
-            self.validate()
-
+    def process_events(self, events):
         enrollments = []
-        for event in self._extract()['Events']:
+        for event in events['Events']:
             section_data = event['Section']
             course_data = section_data['Course']
 

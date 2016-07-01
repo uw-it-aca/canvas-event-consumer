@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.utils.log import getLogger
+from logging import getLogger
 from sis_provisioner.cache import RestClientsCache
 from restclients.kws import KWS
 from restclients.exceptions import DataFailureException
@@ -38,6 +38,7 @@ class EventBase(object):
         self._body = message['Body']
         self._re_guid = re.compile(
             r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
+        self._re_json_cruft = re.compile(r'[^{]*({.*})[^}]*')
         if self._header['MessageType'] != self._eventMessageType:
             raise EventException(
                 'Unknown Message Type: %s' % (self._header['MessageType']))
@@ -69,9 +70,13 @@ class EventBase(object):
         except Exception as err:
             raise EventException('Invalid signature: %s' % (err))
 
-    def _extract(self):
+    def extract(self):
         try:
             t = self._header['Encoding']
+            if str(t).lower() == 'none':
+                return(json.loads(
+                    self._re_json_cruft.sub(r'\g<1>', self._body)))
+
             if str(t).lower() != 'base64':
                 raise EventException('Unkown encoding: ' + t)
 
@@ -79,8 +84,6 @@ class EventBase(object):
             if str(t).lower() != 'aes128cbc':
                 raise EventException('Unsupported algorithm: ' + t)
 
-            # regex removes cruft around JSON
-            rx = re.compile(r'[^{]*({.*})[^}]*')
             key = None
             if 'KeyURL' in self._header:
                 key = self._kws._key_from_json(
@@ -102,7 +105,7 @@ class EventBase(object):
             cipher = aes128cbc(b64decode(key.key),
                                b64decode(self._header['IV']))
             body = cipher.decrypt(b64decode(self._body))
-            return(json.loads(rx.sub(r'\g<1>', body)))
+            return(json.loads(self._re_json_cruft.sub(r'\g<1>', body)))
         except KeyError as err:
             self._log.error(
                 "Key Error: %s\nHEADER: %s" % (err, self._header))
@@ -116,6 +119,15 @@ class EventBase(object):
             raise EventException(msg)
         except Exception as err:
             raise EventException('Cannot read: %s' % (err))
+
+    def process(self):
+        if self._settings.get('VALIDATE_MSG_SIGNATURE', True):
+            self.validate()
+
+        self.process_events(self.extract())
+
+    def process_events(self, events):
+        raise EventException('No event processor defined')
 
     def recordSuccess(self, log_model, event_count):
         minute = int(floor(time() / 60))
