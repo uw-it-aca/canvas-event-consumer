@@ -1,7 +1,8 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from events import EventBase, EventException
 from events.models import InstructorLog
-from restclients.models.sws import Section, Term
+from restclients.models.sws import Section
+from restclients.sws.term import get_term_by_year_and_quarter
 from dateutil.parser import parse as date_parse
 
 
@@ -15,37 +16,55 @@ class InstructorEventBase(EventBase):
 
         section_data = event['Current']
         course_data = section_data['Course']
+
+        term = get_term_by_year_and_quarter(
+            section_data['Term']['Year'], section_data['Term']['Quarter'])
+
         section = Section(
-            term=Term(quarter=course_data['Quarter'],
-                      year=course_data['Year']),
+            term=term,
             curriculum_abbr=course_data['CurriculumAbbreviation'],
             course_number=course_data['CourseNumber'],
             section_id=section_data['SectionID'])
 
+        campus = section_data['CourseCampus'].lower()
+        tsc = dict((t.campus.lower(),
+                    t.is_on) for t in term.time_schedule_construction)
+        if campus not in tsc or tsc[campus]:
+            message = "Ignoring: TSC not ready: %s" % (
+                section.canvas_section_sis_id())
+            if self._eventMessageType == 'uw-instructor-drop':
+                self._log.error(message)
+            else:
+                self._log.warning(message)
 
+            return
+
+        sections = []
         primary_section = section_data["PrimarySection"]
         if (primary_section is not None and
             primary_section["SectionID"] != section.section_id):
             section.is_primary_section = False
-            self.load_instructors(section)
+            sections.append(section)
         else:
             if len(section_data["LinkedSectionTypes"]):
                 for linked_section_type in section_data["LinkedSectionTypes"]:
                     for linked_section_data in linked_section_type["LinkedSections"]:
                         section = Section(
-                            term=Term(quarter=linked_section_data['Section']['Quarter'],
-                                      year=linked_section_data['Section']['Year']),
+                            term=term,
                             curriculum_abbr=linked_section_data['Section']['CurriculumAbbreviation'],
                             course_number=linked_section_data['Section']['CourseNumber'],
                             section_id=linked_section_data['Section']['SectionID'],
                             is_primary_section=False)
-                        self.load_instructors(section)
+                        sections.append(section)
             else:
                 section.is_primary_section = True
                 section.primary_section_curriculum_abbr = primary_section['CurriculumAbbreviation']
                 section.primary_section_course_number = primary_section['CourseNumber']
                 section.primary_section_id = primary_section['SectionID']
-                self.load_instructors(section)
+                sections.append(section)
+
+        for section in sections:
+            self.load_instructors(section)
 
     def gather(self, reg_id_list, status, section):
         enrollments = []
