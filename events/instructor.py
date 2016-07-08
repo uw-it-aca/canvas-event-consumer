@@ -42,6 +42,9 @@ class InstructorEventBase(EventBase):
                         self.load_instructors(section)
             else:
                 section.is_primary_section = True
+                section.primary_section_curriculum_abbr = primary_section['CurriculumAbbreviation']
+                section.primary_section_course_number = primary_section['CourseNumber']
+                section.primary_section_id = primary_section['SectionID']
                 self.load_instructors(section)
 
     def gather(self, reg_id_list, status, section):
