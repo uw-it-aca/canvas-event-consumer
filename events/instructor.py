@@ -1,20 +1,64 @@
-from sis_provisioner.loader import Loader
+from sis_provisioner.models import Enrollment as EnrollmentModel
 from events import EventBase, EventException
-from restclients.models.sws import Section
+from events.models import InstructorLog
+from restclients.models.sws import Section, Term
+from dateutil.parser import parse as date_parse
 
 
 class InstructorEventBase(EventBase):
     def process_events(self, event):
-        # raw Section json is lighter weight than restclient Section model
         self._previous_instructors = self._instructors_from_section_json(
             event['Previous'])
-
         self._current_instructors = self._instructors_from_section_json(
             event['Current'])
+        self._last_modified = date_parse(event['LastModified'])
 
-        self._course_id = self._course_id_from_section_json(event['Current'])
+        section_data = event['Current']
+        course_data = section_data['Course']
+        section = Section(
+            term=Term(quarter=course_data['Quarter'],
+                      year=course_data['Year']),
+            curriculum_abbr=course_data['CurriculumAbbreviation'],
+            course_number=course_data['CourseNumber'],
+            section_id=section_data['SectionID'])
 
-        self.load_instructors()
+
+        primary_section = section_data["PrimarySection"]
+        if (primary_section is not None and
+            primary_section["SectionID"] != section.section_id):
+            section.is_primary_section = False
+            self.load_instructors(section)
+        else:
+            if len(section_data["LinkedSectionTypes"]):
+                for linked_section_type in section_data["LinkedSectionTypes"]:
+                    for linked_section_data in linked_section_type["LinkedSections"]:
+                        section = Section(
+                            term=Term(quarter=linked_section_data['Section']['Quarter'],
+                                      year=linked_section_data['Section']['Year']),
+                            curriculum_abbr=linked_section_data['Section']['CurriculumAbbreviation'],
+                            course_number=linked_section_data['Section']['CourseNumber'],
+                            section_id=linked_section_data['Section']['SectionID'],
+                            is_primary_section=False)
+                        self.load_instructors(section)
+            else:
+                section.is_primary_section = True
+                self.load_instructors(section)
+
+    def gather(self, reg_id_list, status, section):
+        enrollments = []
+        for reg_id in reg_id_list:
+            enrollments.append({
+                'UWRegID': reg_id,
+                'Section': section,
+                'Role': EnrollmentModel.INSTRUCTOR_ROLE,
+                'Status': status,
+                'LastModified': self._last_modified
+            })
+
+        return enrollments
+
+    def load_instructors(self, section):
+        raise Exception('No load_instructors method')
 
     def _instructors_from_section_json(self, section):
         instructors = {}
@@ -23,13 +67,6 @@ class InstructorEventBase(EventBase):
                 instructors[instructor['RegID']] = instructor
 
         return instructors.keys()
-
-    def _course_id_from_section_json(self, section):
-        return "%s-%s-%s-%s" % (
-            section['Course']['Year'],
-            section['Course']['Quarter'],
-            section['Course']['CurriculumAbbreviation'],
-            section['Course']['CourseNumber'])
 
 
 class InstructorAdd(InstructorEventBase):
@@ -43,12 +80,15 @@ class InstructorAdd(InstructorEventBase):
     _eventMessageType = 'uw-instructor-add'
     _eventMessageVersion = '1'
 
-    def load_instructors(self):
-        add = [regid for regid in self._current_instructors \
-               if regid not in self._previous_instructors]
-        if len(add):
-            Loader().load_added_instructors(add, self._course_id)
-            self.recordSuccess(InstructorLog, 1)
+    def load_instructors(self, section):
+        add = [reg_id for reg_id in self._current_instructors \
+               if reg_id not in self._previous_instructors]
+        enrollments = self.gather(
+            add, EnrollmentModel.ACTIVE_STATUS, section)
+        self.load(enrollments)
+
+    def record_success(self, event_count):
+        self.record_success_to_log(InstructorLog, event_count)
 
 
 class InstructorDrop(InstructorEventBase):
@@ -62,9 +102,12 @@ class InstructorDrop(InstructorEventBase):
     _eventMessageType = 'uw-instructor-drop'
     _eventMessageVersion = '1'
 
-    def load_instructors(self):
-        drop = [regid for regid in self._previous_instructors \
-                if regid not in self._current_instructors]
-        if len(drop):
-            Loader().load_dropped_instructors(drop, self._course_id)
-            self.recordSuccess(InstructorLog, 1)
+    def load_instructors(self, section):
+        drop = [reg_id for reg_id in self._previous_instructors \
+                if reg_id not in self._current_instructors]
+        enrollments = self.gather(
+            drop, EnrollmentModel.DELETED_STATUS, section)
+        self.load(enrollments)
+
+    def record_success(self, event_count):
+        self.record_success_to_log(InstructorLog, event_count)

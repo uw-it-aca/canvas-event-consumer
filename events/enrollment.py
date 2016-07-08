@@ -57,6 +57,7 @@ class Enrollment(EventBase):
             try:
                 data = {
                     'Section': section,
+                    'Role' : EnrollmentModel.STUDENT_ROLE,
                     'UWRegID': event['Person']['UWRegID'],
                     'Status': self._enrollment_status(event, section),
                     'LastModified': date_parse(event['LastModified']),
@@ -66,7 +67,7 @@ class Enrollment(EventBase):
                 }
 
                 if 'Auditor' in event:
-                    data['Auditor'] = event['Auditor']
+                    data['Role'] = EnrollmentModel.AUDITOR_ROLE
 
                 if 'RequestDate' in event:
                     data['RequestDate'] = date_parse(event['RequestDate'])
@@ -79,16 +80,10 @@ class Enrollment(EventBase):
                     event['LastModified']))
                 pass
 
-        enrollment_count = len(enrollments)
-        if enrollment_count:
-            loader = Loader()
-            for enrollment in enrollments:
-                try:
-                    loader.load_enrollment(enrollment)
-                except Exception as err:
-                    raise EventException('Load enrollment failed: %s' % (err))
+        self.load(enrollments)
 
-            self.recordSuccess(EnrollmentLog, enrollment_count)
+    def record_success(self, event_count):
+        self.record_success_to_log(EnrollmentLog, event_count)
 
     def _enrollment_status(self, event, section):
         # Canvas "active" corresponds to Action codes:

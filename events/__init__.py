@@ -1,9 +1,8 @@
-from django.conf import settings
 from logging import getLogger
+from sis_provisioner.loader import Loader
 from sis_provisioner.cache import RestClientsCache
 from restclients.kws import KWS
 from restclients.exceptions import DataFailureException
-from events.models import EnrollmentLog
 from aws_message.crypto import aes128cbc, Signature, CryptoException
 from base64 import b64decode
 from time import time
@@ -129,7 +128,19 @@ class EventBase(object):
     def process_events(self, events):
         raise EventException('No event processor defined')
 
-    def recordSuccess(self, log_model, event_count):
+    def load(self, enrollments):
+        enrollment_count = len(enrollments)
+        if enrollment_count:
+            loader = Loader()
+            for enrollment in enrollments:
+                try:
+                    loader.load_enrollment(enrollment)
+                except Exception as err:
+                    raise EventException('Load enrollment failed: %s' % (err))
+
+            self.record_success(enrollment_count)
+
+    def record_success_to_log(self, log_model, event_count):
         minute = int(floor(time() / 60))
         try:
             e = log_model.objects.get(minute=minute)
