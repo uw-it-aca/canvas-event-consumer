@@ -70,7 +70,6 @@ class EventBase(object):
             raise EventException('Invalid signature: %s' % (err))
 
     def extract(self):
-        import pdb; pdb.set_trace()
         try:
             t = self._header['Encoding']
             if str(t).lower() == 'none':
