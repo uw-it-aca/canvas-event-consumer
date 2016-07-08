@@ -1,5 +1,5 @@
-from sis_provisioner.loader import Loader
-from events import EventBase, EventException, EnrollmentLog
+from events import EventBase, EventException
+from events.models import EnrollmentLog
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from restclients.models.sws import Term, Section
 from dateutil.parser import parse as date_parse
