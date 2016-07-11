@@ -3,7 +3,8 @@ from django.conf import settings
 from django.utils.log import getLogger
 from sis_provisioner.views.rest_dispatch import RESTDispatch
 from aws_message.aws import SNS, SNSException
-from enrollment import Enrollment, EnrollmentException
+from events import EventException
+from events.enrollment import Enrollment
 import json
 
 
@@ -47,7 +48,7 @@ class EnrollmentEvent(RESTDispatch):
         except ValueError as err:
             log.error('JSON : %s' % err)
             return self.error_response(400, "Invalid JSON")
-        except EnrollmentException, err:
+        except EventException, err:
             log.error("ENROLLMENT: " + str(err))
             return self.error_response(500, "Internal Server Error")
         except SNSException, err:
