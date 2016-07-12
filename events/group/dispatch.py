@@ -321,8 +321,8 @@ class CourseGroupDispatch(Dispatch):
     def mine(self, group):
         course = ('course_' in group and re.match(
             (r'^course_(20[0-9]{2})'
-             + '([a-z]{3})-([a-z\-]+)'
-             + '([0-9]{3})([a-z][a-z0-9]?)$'), group))
+             r'([a-z]{3})-([a-z\-]+)'
+             r'([0-9]{3})([a-z][a-z0-9]?)$'), group))
         if course:
             self._course_sis_id = '-'.join([
                 course.group(1),
