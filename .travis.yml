@@ -1,0 +1,18 @@
+sudo: false
+language: python
+python:
+  - "2.7"
+before_install:
+  - cp travis-ci/test_requirements.txt requirements.txt
+install: pip install -r requirements.txt
+before_script:
+  - pip install coverage
+  - pip install python-coveralls
+  - pip install pep8
+  - cp travis-ci/manage.py manage.py
+script:
+  - pep8 events/ --exclude=test
+  - coverage run --source=events/ manage.py test events
+after_script:
+  - coveralls
+notifications:

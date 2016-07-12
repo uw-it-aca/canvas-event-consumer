@@ -1,0 +1,3 @@
+-e .
+-e git+https://github.com/uw-it-aca/uw-restclients#egg=RestClients
+-e git+https://github.com/uw-it-aca/canvas-sis-provisioner.git#egg=sis_provisioner
