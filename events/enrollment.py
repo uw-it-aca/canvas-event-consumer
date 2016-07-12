@@ -19,9 +19,9 @@ class Enrollment(EventBase):
     SETTINGS_NAME = 'ENROLLMENT_V2'
     EXCEPTION_CLASS = EventException
 
-##  What we expect in a v1 enrollment message
-#  _eventMessageType = 'uw-student-registration'
-#   eventMessageVersion = '1'
+    #  What we expect in a v1 enrollment message
+    #  _eventMessageType = 'uw-student-registration'
+    #   eventMessageVersion = '1'
 
     # What we expect in a v2 enrollment message
     _eventMessageType = 'uw-student-registration-v2'
