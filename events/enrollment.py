@@ -62,8 +62,8 @@ class Enrollment(EventBase):
                     'Status': self._enrollment_status(event, section),
                     'LastModified': date_parse(event['LastModified']),
                     'InstructorUWRegID': event['Instructor']['UWRegID'] if (
-                        'Instructor' in event and event['Instructor']
-                        and 'UWRegID' in event['Instructor']) else None
+                        'Instructor' in event and event['Instructor'] and
+                        'UWRegID' in event['Instructor']) else None
                 }
 
                 if 'Auditor' in event:
