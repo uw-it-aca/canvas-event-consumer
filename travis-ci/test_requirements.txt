@@ -1,3 +1,4 @@
 -e .
 -e git+https://github.com/uw-it-aca/uw-restclients#egg=RestClients
 -e git+https://github.com/uw-it-aca/canvas-sis-provisioner.git@feature/django-1.9#egg=sis_provisioner
+-e git+https://github.com/uw-it-aca/canvas-eos-import#egg=canvas-eos-import
