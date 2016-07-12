@@ -37,12 +37,12 @@ class Group(object):
         header = message['header']
 
         if header['messageType'] != self._groupMessageType:
-            raise GroupException('Unknown Group Message Type: '
-                                 + str(header['messageType']))
+            raise GroupException(
+                'Unknown Group Message Type: %s' % header['messageType'])
 
         if header['version'] != self._groupMessageVersion:
-            raise GroupException('Unknown Group Message Version: '
-                                 + str(header['version']))
+            raise GroupException(
+                'Unknown Group Message Version: %s' % header['version'])
 
         context = json.loads(b64decode(header['messageContext']))
         self._action = context['action']
