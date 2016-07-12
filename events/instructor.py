@@ -42,24 +42,29 @@ class InstructorEventBase(EventBase):
         sections = []
         primary_section = section_data["PrimarySection"]
         if (primary_section is not None and
-            primary_section["SectionID"] != section.section_id):
+                primary_section["SectionID"] != section.section_id):
             section.is_primary_section = False
             sections.append(section)
         else:
             if len(section_data["LinkedSectionTypes"]):
                 for linked_section_type in section_data["LinkedSectionTypes"]:
-                    for linked_section_data in linked_section_type["LinkedSections"]:
+
+                    for linked_section_data in \
+                            linked_section_type["LinkedSections"]:
+                        lsd_data = linked_section_data['Section']
                         section = Section(
                             term=term,
-                            curriculum_abbr=linked_section_data['Section']['CurriculumAbbreviation'],
-                            course_number=linked_section_data['Section']['CourseNumber'],
-                            section_id=linked_section_data['Section']['SectionID'],
+                            curriculum_abbr=lsd_data['CurriculumAbbreviation'],
+                            course_number=lsd_data['CourseNumber'],
+                            section_id=lsd_data['SectionID'],
                             is_primary_section=False)
                         sections.append(section)
             else:
                 section.is_primary_section = True
-                section.primary_section_curriculum_abbr = primary_section['CurriculumAbbreviation']
-                section.primary_section_course_number = primary_section['CourseNumber']
+                section.primary_section_curriculum_abbr = \
+                    primary_section['CurriculumAbbreviation']
+                section.primary_section_course_number = \
+                    primary_section['CourseNumber']
                 section.primary_section_id = primary_section['SectionID']
                 sections.append(section)
 
@@ -103,7 +108,7 @@ class InstructorAdd(InstructorEventBase):
     _eventMessageVersion = '1'
 
     def load_instructors(self, section):
-        add = [reg_id for reg_id in self._current_instructors \
+        add = [reg_id for reg_id in self._current_instructors
                if reg_id not in self._previous_instructors]
         enrollments = self.gather(
             add, EnrollmentModel.ACTIVE_STATUS, section)
@@ -125,7 +130,7 @@ class InstructorDrop(InstructorEventBase):
     _eventMessageVersion = '1'
 
     def load_instructors(self, section):
-        drop = [reg_id for reg_id in self._previous_instructors \
+        drop = [reg_id for reg_id in self._previous_instructors
                 if reg_id not in self._current_instructors]
         enrollments = self.gather(
             drop, EnrollmentModel.DELETED_STATUS, section)

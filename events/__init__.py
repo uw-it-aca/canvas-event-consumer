@@ -93,7 +93,7 @@ class EventBase(object):
                 try:
                     key = self._kws.get_current_key(
                         self._header['MessageType'])
-                    if not re.match(r'^\s*{.+}\s*$', body):
+                    if not re.match(r'^\s*{.+}\s*$', self._body):
                         raise CryptoException()
                 except (ValueError, CryptoException) as err:
                     RestClientsCache().delete_cached_kws_current_key(
@@ -155,4 +155,3 @@ class EventBase(object):
                 'EVENT_COUNT_PRUNE_AFTER_DAY', 7) * 24 * 60
             prune = minute - limit
             log_model.objects.filter(minute__lt=prune).delete()
-

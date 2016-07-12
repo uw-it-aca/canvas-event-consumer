@@ -19,9 +19,9 @@ class Enrollment(EventBase):
     SETTINGS_NAME = 'ENROLLMENT_V2'
     EXCEPTION_CLASS = EventException
 
-    ## What we expect in a v1 enrollment message
-    #_eventMessageType = 'uw-student-registration'
-    #_eventMessageVersion = '1'
+##  What we expect in a v1 enrollment message
+#  _eventMessageType = 'uw-student-registration'
+#   eventMessageVersion = '1'
 
     # What we expect in a v2 enrollment message
     _eventMessageType = 'uw-student-registration-v2'
@@ -36,10 +36,10 @@ class Enrollment(EventBase):
             section = Section()
             section.term = Term(quarter=course_data['Quarter'],
                                 year=course_data['Year'])
-            section.curriculum_abbr=course_data['CurriculumAbbreviation']
-            section.course_number=course_data['CourseNumber']
-            section.section_id=section_data['SectionID']
-            section.is_primary_section=True
+            section.curriculum_abbr = course_data['CurriculumAbbreviation']
+            section.course_number = course_data['CourseNumber']
+            section.section_id = section_data['SectionID']
+            section.is_primary_section = True
             section.linked_section_urls = []
 
             if ('PrimarySection' in event and
@@ -57,7 +57,7 @@ class Enrollment(EventBase):
             try:
                 data = {
                     'Section': section,
-                    'Role' : EnrollmentModel.STUDENT_ROLE,
+                    'Role': EnrollmentModel.STUDENT_ROLE,
                     'UWRegID': event['Person']['UWRegID'],
                     'Status': self._enrollment_status(event, section),
                     'LastModified': date_parse(event['LastModified']),
