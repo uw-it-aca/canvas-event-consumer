@@ -1,9 +1,7 @@
 from django.core.management.base import CommandError
-from django.conf import settings
 from sis_provisioner.management.commands import SISProvisionerCommand
 from aws_message.gather import Gather, GatherException
 from events.enrollment import Enrollment
-from events import EventException
 from events.models import EnrollmentLog
 from time import time
 from math import floor

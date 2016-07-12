@@ -1,5 +1,5 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
-from events import EventBase, EventException
+from events.event import EventBase, EventException
 from events.models import InstructorLog
 from restclients.models.sws import Section
 from restclients.sws.term import get_term_by_year_and_quarter

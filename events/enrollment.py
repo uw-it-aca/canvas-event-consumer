@@ -1,4 +1,4 @@
-from events import EventBase, EventException
+from events.event import EventBase, EventException
 from events.models import EnrollmentLog
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from restclients.models.sws import Term, Section

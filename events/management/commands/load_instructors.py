@@ -1,9 +1,7 @@
 from django.core.management.base import CommandError
-from django.conf import settings
 from sis_provisioner.management.commands import SISProvisionerCommand
 from aws_message.gather import Gather, GatherException
 from events.instructor import InstructorAdd, InstructorDrop
-from events import EventException
 from events.models import InstructorLog
 from time import time
 from math import floor
@@ -19,7 +17,8 @@ class InstructorProvisionerCommand(SISProvisionerCommand):
             delta = int(floor(time() / 60)) - recent[0].minute
             if (delta > acceptable_silence):
                 self.squawk(
-                    "No instructor add events in the last %s hrs and %s mins" % (
+                    "No instructor add events in the last " +
+                    "%s hrs and %s mins" % (
                         int(floor((delta/60))), (delta % 60)))
 
 
