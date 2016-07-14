@@ -149,9 +149,7 @@ class EventBase(object):
             loader = Loader()
             for enrollment in enrollments:
                 try:
-                    print "would load %s" % (enrollment)
-                    return
-#                    loader.load_enrollment(enrollment)
+                    loader.load_enrollment(enrollment)
                 except Exception as err:
                     raise EventException('Load enrollment failed: %s' % (err))
 
