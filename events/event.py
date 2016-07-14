@@ -33,37 +33,47 @@ class EventBase(object):
         """
         self._kws = KWS()
         self._settings = settings
-        self._header = message['Header']
-        self._body = message['Body']
         self._re_guid = re.compile(
             r'^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$', re.I)
         self._re_json_cruft = re.compile(r'[^{]*({.*})[^}]*')
-        if self._header['MessageType'] != self._eventMessageType:
+
+        try:
+            self._header = message['Header']
+            self._body = message['Body']
+        except KeyError:
+            self._header = {}
+            self._body = message
+
+        if ('MessageType' in self._header and
+                self._header['MessageType'] != self._eventMessageType):
             raise EventException(
                 'Unknown Message Type: %s' % (self._header['MessageType']))
 
         self._log = getLogger(__name__)
 
     def validate(self):
-        t = self._header['Version']
-        if t != self._eventMessageVersion:
-            raise EventException('Unknown Version: ' + t)
-
-        to_sign = self._header['MessageType'] + '\n' \
-            + self._header['MessageId'] + '\n' \
-            + self._header['TimeStamp'] + '\n' \
-            + self._body + '\n'
-
-        sig_conf = {
-            'cert': {
-                'type': 'url',
-                'reference': self._header['SigningCertURL']
-            }
-        }
-
         try:
+            t = self._header['Version']
+            if t != self._eventMessageVersion:
+                raise EventException('Unknown Version: ' + t)
+
+            to_sign = self._header['MessageType'] + '\n' \
+                + self._header['MessageId'] + '\n' \
+                + self._header['TimeStamp'] + '\n' \
+                + self._body + '\n'
+
+            sig_conf = {
+                'cert': {
+                    'type': 'url',
+                    'reference': self._header['SigningCertURL']
+                }
+            }
+
             Signature(sig_conf).validate(to_sign.encode('ascii'),
                                          b64decode(self._header['Signature']))
+        except KeyError as err:
+            if len(self._header):
+                raise EventException('Invalid Signature Header: %s' % (err))
         except CryptoException as err:
             raise EventException('Crypto: %s' % (err))
         except Exception as err:
@@ -71,11 +81,16 @@ class EventBase(object):
 
     def extract(self):
         try:
-            t = self._header['Encoding']
-            if str(t).lower() == 'none':
-                return(json.loads(
-                    self._re_json_cruft.sub(r'\g<1>', self._body)))
+            if 'Encoding' not in self._header:
+                if isinstance(self._body, basestring):
+                    return(json.loads(
+                        self._re_json_cruft.sub(r'\g<1>', self._body)))
+                elif isinstance(self._body, dict):
+                    return self._body
+                else:
+                    raise EventException('No body encoding')
 
+            t = self._header['Encoding']
             if str(t).lower() != 'base64':
                 raise EventException('Unkown encoding: ' + t)
 
@@ -128,17 +143,22 @@ class EventBase(object):
     def process_events(self, events):
         raise EventException('No event processor defined')
 
-    def load(self, enrollments):
+    def load_enrollments(self, enrollments):
         enrollment_count = len(enrollments)
         if enrollment_count:
             loader = Loader()
             for enrollment in enrollments:
                 try:
-                    loader.load_enrollment(enrollment)
+                    print "would load %s" % (enrollment)
+                    return
+#                    loader.load_enrollment(enrollment)
                 except Exception as err:
                     raise EventException('Load enrollment failed: %s' % (err))
 
-            self.record_success(enrollment_count)
+            try:
+                self.record_success(enrollment_count)
+            except:
+                pass
 
     def record_success_to_log(self, log_model, event_count):
         minute = int(floor(time() / 60))

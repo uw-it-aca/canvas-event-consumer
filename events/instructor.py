@@ -12,7 +12,7 @@ class InstructorEventBase(EventBase):
             event['Previous'])
         self._current_instructors = self._instructors_from_section_json(
             event['Current'])
-        self._last_modified = date_parse(event['LastModified'])
+        self._last_modified = date_parse(event['EventDate'])
 
         section_data = event['Current']
         course_data = section_data['Course']
@@ -71,7 +71,7 @@ class InstructorEventBase(EventBase):
         for section in sections:
             self.load_instructors(section)
 
-    def gather(self, reg_id_list, status, section):
+    def enrollments(self, reg_id_list, status, section):
         enrollments = []
         for reg_id in reg_id_list:
             enrollments.append({
@@ -91,7 +91,7 @@ class InstructorEventBase(EventBase):
         instructors = {}
         for meeting in section['Meetings']:
             for instructor in meeting['Instructors']:
-                instructors[instructor['RegID']] = instructor
+                instructors[instructor['Person']['RegID']] = instructor
 
         return instructors.keys()
 
@@ -110,9 +110,9 @@ class InstructorAdd(InstructorEventBase):
     def load_instructors(self, section):
         add = [reg_id for reg_id in self._current_instructors
                if reg_id not in self._previous_instructors]
-        enrollments = self.gather(
+        enrollments = self.enrollments(
             add, EnrollmentModel.ACTIVE_STATUS, section)
-        self.load(enrollments)
+        self.load_enrollments(enrollments)
 
     def record_success(self, event_count):
         self.record_success_to_log(InstructorLog, event_count)
@@ -132,9 +132,9 @@ class InstructorDrop(InstructorEventBase):
     def load_instructors(self, section):
         drop = [reg_id for reg_id in self._previous_instructors
                 if reg_id not in self._current_instructors]
-        enrollments = self.gather(
+        enrollments = self.enrollments(
             drop, EnrollmentModel.DELETED_STATUS, section)
-        self.load(enrollments)
+        self.load_enrollments(enrollments)
 
     def record_success(self, event_count):
         self.record_success_to_log(InstructorLog, event_count)

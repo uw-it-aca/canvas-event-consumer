@@ -80,7 +80,7 @@ class Enrollment(EventBase):
                     event['LastModified']))
                 pass
 
-        self.load(enrollments)
+        self.load_enrollments(enrollments)
 
     def record_success(self, event_count):
         self.record_success_to_log(EnrollmentLog, event_count)
