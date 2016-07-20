@@ -3,7 +3,7 @@ from base64 import b64decode
 from time import time
 from math import floor
 import dateutil.parser
-from django.utils.log import getLogger
+from logging import getLogger
 from events.models import GroupLog
 from events.group.dispatch import ImportGroupDispatch, CourseGroupDispatch
 from events.group.dispatch import UWGroupDispatch, Dispatch

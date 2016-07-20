@@ -6,7 +6,7 @@ from django.conf import settings
 from django.http import HttpResponse
 from sis_provisioner.views.rest_dispatch import RESTDispatch
 from events.models import EnrollmentLog, GroupLog
-from django.utils.log import getLogger
+from logging import getLogger
 import json
 
 

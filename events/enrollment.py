@@ -5,7 +5,7 @@ from time import time
 from math import floor
 import dateutil.parser
 from django.conf import settings
-from django.utils.log import getLogger
+from logging import getLogger
 from sis_provisioner.loader import Loader
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.cache import RestClientsCache

@@ -1,6 +1,6 @@
 from django.http import HttpResponse
 from django.conf import settings
-from django.utils.log import getLogger
+from logging import getLogger
 from sis_provisioner.views.rest_dispatch import RESTDispatch
 from aws_message.aws import SNS, SNSException
 from enrollment import Enrollment, EnrollmentException
