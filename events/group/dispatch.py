@@ -1,7 +1,7 @@
 import re
 import datetime
 from django.conf import settings
-from django.utils.log import getLogger
+from logging import getLogger
 from django.utils.timezone import utc
 from sis_provisioner.policy import UserPolicy, UserPolicyException
 from sis_provisioner.policy import GroupPolicy, GroupPolicyException,\
