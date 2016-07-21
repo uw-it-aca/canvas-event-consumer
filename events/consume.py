@@ -3,7 +3,7 @@ from django.conf import settings
 from logging import getLogger
 from sis_provisioner.views.rest_dispatch import RESTDispatch
 from aws_message.aws import SNS, SNSException
-from events import EventException
+from events.event import EventException
 from events.enrollment import Enrollment
 import json
 
