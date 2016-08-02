@@ -1,32 +1,34 @@
 from django.core.management.base import CommandError
 from sis_provisioner.management.commands import SISProvisionerCommand
 from aws_message.gather import Gather, GatherException
-from events.enrollment import Enrollment
-from events.models import EnrollmentLog
+from events.instructor import InstructorAdd, InstructorDrop
+from events.models import InstructorLog
 from time import time
 from math import floor
 
 
-class EnrollmentProvisionerCommand(SISProvisionerCommand):
+class InstructorProvisionerCommand(SISProvisionerCommand):
     def health_check(self):
-        # squawk if no new events in the last 6 hours
+        # squawk if no new events in the last 24 hours
         # TODO: vary acceptability by where we are in the term
-        acceptable_silence = (6 * 60)
-        recent = EnrollmentLog.objects.all().order_by('-minute')[:1]
+        acceptable_silence = (24 * 60)
+        recent = InstructorLog.objects.all().order_by('-minute')[:1]
         if len(recent):
             delta = int(floor(time() / 60)) - recent[0].minute
             if (delta > acceptable_silence):
                 self.squawk(
-                    "No enrollment events in the last %s hrs and %s mins" % (
+                    "No instructor add events in the last " +
+                    "%s hrs and %s mins" % (
                         int(floor((delta/60))), (delta % 60)))
 
 
-class Command(EnrollmentProvisionerCommand):
+class Command(InstructorProvisionerCommand):
     help = "Loads enrollment events from SQS"
 
     def handle(self, *args, **options):
         try:
-            Gather(processor=Enrollment).gather_events()
+            Gather(processor=InstructorAdd).gather_events()
+            Gather(processor=InstructorDrop).gather_events()
             self.update_job()
         except GatherException as err:
             raise CommandError(err)
