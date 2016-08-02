@@ -3,11 +3,9 @@ from django.conf import settings
 from logging import getLogger
 from sis_provisioner.views.rest_dispatch import RESTDispatch
 from aws_message.aws import SNS, SNSException
-from enrollment import Enrollment, EnrollmentException
+from events.event import EventException
+from events.enrollment import Enrollment
 import json
-
-
-log = getLogger('events.consume')
 
 
 class EnrollmentEvent(RESTDispatch):
@@ -20,11 +18,12 @@ class EnrollmentEvent(RESTDispatch):
 
     def __init__(self):
         self._topicArn = settings.AWS_SQS['ENROLLMENT']['TOPIC_ARN']
+        self._log = getLogger(__name__)
 
     def POST(self, request, **kwargs):
         try:
             aws_msg = json.loads(request.body)
-            log.info(aws_msg['Type'] + ' on ' + aws_msg['TopicArn'])
+            self._log.info("%s on %s" % (aws_msg['Type'], aws_msg['TopicArn']))
             if aws_msg['TopicArn'] == self._topicArn:
                 aws = SNS(aws_msg)
 
@@ -39,22 +38,24 @@ class EnrollmentEvent(RESTDispatch):
 
                     enrollment.process()
                 elif aws_msg['Type'] == 'SubscriptionConfirmation':
-                    log.info('SubscribeURL: ' + aws_msg['SubscribeURL'])
+                    self._log.info('SubscribeURL: %s' % (
+                        aws_msg['SubscribeURL']))
                     aws.subscribe()
             else:
-                log.error('Unrecognized TopicARN : ' + aws_msg['TopicArn'])
+                self._log.error('Unrecognized TopicARN : %s' % (
+                    aws_msg['TopicArn']))
                 return self.error_response(400, "Invalid TopicARN")
         except ValueError as err:
-            log.error('JSON : %s' % err)
+            self._log.error('JSON : %s' % err)
             return self.error_response(400, "Invalid JSON")
-        except EnrollmentException, err:
-            log.error("ENROLLMENT: " + str(err))
+        except EventException, err:
+            self._log.error("ENROLLMENT: %s" % (err))
             return self.error_response(500, "Internal Server Error")
         except SNSException, err:
-            log.error("SNS: " + str(err))
+            self._log.error("SNS: %s" % (err))
             return self.error_response(401, "Authentication Failure")
         except Exception, err:
-            log.error(str(err))
+            self._log.error("%s" % (err))
             return self.error_response(500, "Internal Server Error")
 
         return HttpResponse()
