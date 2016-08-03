@@ -26,10 +26,9 @@ class InstructorEventBase(EventBase):
             course_number=course_data['CourseNumber'],
             section_id=section_data['SectionID'])
 
-        campus = section_data['CourseCampus'].lower()
         tsc = dict((t.campus.lower(),
                     t.is_on) for t in term.time_schedule_construction)
-        if campus not in tsc or tsc[campus]:
+        if tsc.get(section_data['CourseCampus'].lower(), False):
             message = "Ignoring: TSC not ready: %s" % (
                 section.canvas_section_sis_id())
             if self._eventMessageType == 'uw-instructor-drop':
