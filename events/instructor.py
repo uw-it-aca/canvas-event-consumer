@@ -89,9 +89,10 @@ class InstructorEventBase(EventBase):
 
     def _instructors_from_section_json(self, section):
         instructors = {}
-        for meeting in section['Meetings']:
-            for instructor in meeting['Instructors']:
-                instructors[instructor['Person']['RegID']] = instructor
+        if section:
+            for meeting in section['Meetings']:
+                for instructor in meeting['Instructors']:
+                    instructors[instructor['Person']['RegID']] = instructor
 
         return instructors.keys()
 
