@@ -66,7 +66,7 @@ class Enrollment(EventBase):
                         'UWRegID' in event['Instructor']) else None
                 }
 
-                if 'Auditor' in event:
+                if 'Auditor' in event and event['Auditor']:
                     data['Role'] = EnrollmentModel.AUDITOR_ROLE
 
                 if 'RequestDate' in event:
