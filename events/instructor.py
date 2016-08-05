@@ -66,6 +66,7 @@ class InstructorEventBase(EventBase):
                 section.primary_section_course_number = \
                     primary_section['CourseNumber']
                 section.primary_section_id = primary_section['SectionID']
+                section.is_independent_study = section_data['IndependentStudy']
                 sections.append(section)
 
         for section in sections:
@@ -73,14 +74,20 @@ class InstructorEventBase(EventBase):
 
     def enrollments(self, reg_id_list, status, section):
         enrollments = []
+        enrollment_data = {
+            'Section': section,
+            'Role': EnrollmentModel.INSTRUCTOR_ROLE,
+            'Status': status,
+            'LastModified': self._last_modified,
+            'InstructorUWRegID': None
+        }
+
         for reg_id in reg_id_list:
-            enrollments.append({
-                'UWRegID': reg_id,
-                'Section': section,
-                'Role': EnrollmentModel.INSTRUCTOR_ROLE,
-                'Status': status,
-                'LastModified': self._last_modified
-            })
+            enrollment_data['UWRegID'] = reg_id
+            enrollment_data['InstructorUWRegID'] = reg_id \
+                if section.is_independent_study else None
+
+            enrollments.append(enrollment_data)
 
         return enrollments
 
