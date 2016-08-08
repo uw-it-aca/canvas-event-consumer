@@ -1,4 +1,5 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
+from sis_provisioner.policy import CoursePolicy
 from events.event import EventBase, EventException
 from events.models import InstructorLog
 from restclients.models.sws import Section
@@ -22,15 +23,13 @@ class InstructorEventBase(EventBase):
 
         section = Section(
             term=term,
+            course_campus=section_data['CourseCampus'],
             curriculum_abbr=course_data['CurriculumAbbreviation'],
             course_number=course_data['CourseNumber'],
             section_id=section_data['SectionID'])
 
-        campus = section_data['CourseCampus'].lower()
-        tsc = dict((t.campus.lower(),
-                    t.is_on) for t in term.time_schedule_construction)
-        if campus in tsc and tsc[campus]:
-            message = "Ignoring: TSC not ready: %s" % (
+        if CoursePolicy().is_time_schedule_construction(section):
+            message = "Ignoring, TSC is on: %s" % (
                 section.canvas_section_sis_id())
             if self._eventMessageType == 'uw-instructor-drop':
                 self._log.error(message)
