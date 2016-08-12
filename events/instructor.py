@@ -5,6 +5,7 @@ from events.models import InstructorLog
 from restclients.models.sws import Section
 from restclients.sws.term import get_term_by_year_and_quarter
 from dateutil.parser import parse as date_parse
+from datetime import date
 
 
 class InstructorEventBase(EventBase):
@@ -18,8 +19,12 @@ class InstructorEventBase(EventBase):
         section_data = event['Current']
         course_data = section_data['Course']
 
+        term_year = section_data['Term']['Year']
+        if term_year < date.today().year:
+            return
+
         term = get_term_by_year_and_quarter(
-            section_data['Term']['Year'], section_data['Term']['Quarter'])
+            term_year, section_data['Term']['Quarter'])
 
         section = Section(
             term=term,
