@@ -34,13 +34,7 @@ class InstructorEventBase(EventBase):
             section_id=section_data['SectionID'])
 
         if CoursePolicy().is_time_schedule_construction(section):
-            message = "Ignoring, TSC is on: %s" % (
-                section.canvas_section_sis_id())
-            if self._eventMessageType == 'uw-instructor-drop':
-                self._log.error(message)
-            else:
-                self._log.warning(message)
-
+            self._log_tsc_ignore(section.canvas_section_sis_id())
             return
 
         sections = []
@@ -107,6 +101,9 @@ class InstructorEventBase(EventBase):
 
         return instructors.keys()
 
+    def record_success(self, event_count):
+        self.record_success_to_log(InstructorLog, event_count)
+
 
 class InstructorAdd(InstructorEventBase):
     """
@@ -126,8 +123,8 @@ class InstructorAdd(InstructorEventBase):
             add, EnrollmentModel.ACTIVE_STATUS, section)
         self.load_enrollments(enrollments)
 
-    def record_success(self, event_count):
-        self.record_success_to_log(InstructorLog, event_count)
+    def _log_tsc_ignore(self, section_id):
+        self._log.info("IGNORE ADD: TSC on for %s" % (section_id))
 
 
 class InstructorDrop(InstructorEventBase):
@@ -148,5 +145,5 @@ class InstructorDrop(InstructorEventBase):
             drop, EnrollmentModel.DELETED_STATUS, section)
         self.load_enrollments(enrollments)
 
-    def record_success(self, event_count):
-        self.record_success_to_log(InstructorLog, event_count)
+    def _log_tsc_ignore(self, section_id):
+        self._log.info("IGNORE DROP: TSC on for %s" % (section_id))

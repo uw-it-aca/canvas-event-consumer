@@ -1,16 +1,10 @@
-from time import time, gmtime, mktime, strftime, localtime
+from time import time, gmtime, strftime
 from calendar import timegm
 from math import floor
 import dateutil.parser
-from django.conf import settings
-from django.http import HttpResponse
 from sis_provisioner.views.rest_dispatch import RESTDispatch
-from events.models import EnrollmentLog, GroupLog
-from logging import getLogger
+from events.models import EnrollmentLog, GroupLog, InstructorLog
 import json
-
-
-log = getLogger('events.enrollment')
 
 
 class EventListView(RESTDispatch):
@@ -49,6 +43,10 @@ class EventListView(RESTDispatch):
 
             if event_type == 'enrollment':
                 event_log = EnrollmentLog.objects.filter(
+                    minute__gte=start_sample
+                )
+            elif event_type == 'instructor':
+                event_log = InstructorLog.objects.filter(
                     minute__gte=start_sample
                 )
             elif event_type == 'group':
