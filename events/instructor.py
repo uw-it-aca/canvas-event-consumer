@@ -26,7 +26,6 @@ class InstructorEventBase(EventBase):
 
         course_data = section_data['Course']
         current_term = get_current_term()
-        import pdb; pdb.set_trace()
         if term != current_term and \
                 term.first_day_quarter < current_term.first_day_quarter:
             self._log.info('STALE: %s-%s-%s-%s' % (
