@@ -3,7 +3,7 @@ from sis_provisioner.policy import CoursePolicy
 from events.event import EventBase, EventException
 from events.models import InstructorLog
 from restclients.models.sws import Section
-from restclients.sws.term import get_term_by_year_and_quarter
+from restclients.sws.term import get_current_term, get_term_by_year_and_quarter
 from dateutil.parser import parse as date_parse
 from datetime import date
 
@@ -17,14 +17,22 @@ class InstructorEventBase(EventBase):
         self._last_modified = date_parse(event['EventDate'])
 
         section_data = event['Current']
-        course_data = section_data['Course']
-
-        term_year = section_data['Term']['Year']
-        if term_year < date.today().year:
-            return
+        if not section_data:
+            section_data = event['Previous']
 
         term = get_term_by_year_and_quarter(
-            term_year, section_data['Term']['Quarter'])
+            section_data['Term']['Year'],
+            section_data['Term']['Quarter'])
+
+        course_data = section_data['Course']
+        current_term = get_current_term()
+        import pdb; pdb.set_trace()
+        if term != current_term and \
+                term.first_day_quarter < current_term.first_day_quarter:
+            self._log.info('STALE: %s-%s-%s-%s' % (
+                term.canvas_sis_id(), course_data['CurriculumAbbreviation'],
+                course_data['CourseNumber'], section_data['SectionID']))
+            return
 
         section = Section(
             term=term,
