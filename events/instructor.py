@@ -26,6 +26,7 @@ class InstructorEventBase(EventBase):
 
         course_data = section_data['Course']
         current_term = get_current_term()
+
         if term != current_term and \
                 term.first_day_quarter < current_term.first_day_quarter:
             self._log.info('STALE: %s-%s-%s-%s' % (
@@ -38,7 +39,8 @@ class InstructorEventBase(EventBase):
             course_campus=section_data['CourseCampus'],
             curriculum_abbr=course_data['CurriculumAbbreviation'],
             course_number=course_data['CourseNumber'],
-            section_id=section_data['SectionID'])
+            section_id=section_data['SectionID'],
+            is_independent_study=section_data['IndependentStudy'])
 
         if CoursePolicy().is_time_schedule_construction(section):
             self._log_tsc_ignore(section.canvas_section_sis_id())
@@ -49,6 +51,7 @@ class InstructorEventBase(EventBase):
         if (primary_section is not None and
                 primary_section["SectionID"] != section.section_id):
             section.is_primary_section = False
+            self._set_primary_section(section, primary_section)
             sections.append(section)
         else:
             if len(section_data["LinkedSectionTypes"]):
@@ -62,20 +65,25 @@ class InstructorEventBase(EventBase):
                             curriculum_abbr=lsd_data['CurriculumAbbreviation'],
                             course_number=lsd_data['CourseNumber'],
                             section_id=lsd_data['SectionID'],
-                            is_primary_section=False)
+                            is_primary_section=False,
+                            is_independent_study=section_data[
+                                'IndependentStudy'])
+                        self._set_primary_section(section, primary_section)
                         sections.append(section)
             else:
                 section.is_primary_section = True
-                section.primary_section_curriculum_abbr = \
-                    primary_section['CurriculumAbbreviation']
-                section.primary_section_course_number = \
-                    primary_section['CourseNumber']
-                section.primary_section_id = primary_section['SectionID']
-                section.is_independent_study = section_data['IndependentStudy']
                 sections.append(section)
 
         for section in sections:
             self.load_instructors(section)
+
+    def _set_primary_section(self, section, primary_section):
+        if primary_section is not None:
+            section.primary_section_curriculum_abbr = \
+                primary_section['CurriculumAbbreviation']
+            section.primary_section_course_number = \
+                primary_section['CourseNumber']
+            section.primary_section_id = primary_section['SectionID']
 
     def enrollments(self, reg_id_list, status, section):
         enrollments = []
