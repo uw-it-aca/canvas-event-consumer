@@ -112,7 +112,19 @@ class InstructorEventBase(EventBase):
         if section:
             for meeting in section['Meetings']:
                 for instructor in meeting['Instructors']:
-                    instructors[instructor['Person']['RegID']] = instructor
+                    if instructor['Person']['RegID']:
+                        instructors[instructor['Person']['RegID']] = instructor
+                    else:
+                        person = []
+                        for k, v in instructor['Person']:
+                            person.append('[%s] = "%s"' % (k, v))
+
+                        course_data = section['Course']
+                        self._log.info('NULL_REG_ID: %s-%s-%s: %s' % (
+                            course_data['CurriculumAbbreviation'],
+                            course_data['CourseNumber'],
+                            section['SectionID'],
+                            ', '.join(person)))
 
         return instructors.keys()
 
