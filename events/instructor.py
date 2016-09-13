@@ -116,7 +116,7 @@ class InstructorEventBase(EventBase):
                         instructors[instructor['Person']['RegID']] = instructor
                     else:
                         person = []
-                        for k, v in instructor['Person']:
+                        for k, v in instructor['Person'].iteritems():
                             person.append('[%s] = "%s"' % (k, v))
 
                         course_data = section['Course']
