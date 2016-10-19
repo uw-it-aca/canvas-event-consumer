@@ -1,7 +1,8 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.policy import CoursePolicy
-from events.event import EventBase, EventException
+from events.event import EventBase
 from events.models import InstructorLog
+from events.exceptions import EventException
 from restclients.models.sws import Section
 from restclients.sws.term import get_current_term, get_term_by_year_and_quarter
 from dateutil.parser import parse as date_parse
