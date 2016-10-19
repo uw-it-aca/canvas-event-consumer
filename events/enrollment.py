@@ -1,12 +1,9 @@
-from events.event import EventBase, EventException
+from events.event import EventBase
 from events.models import EnrollmentLog
+from events.exceptions import EventException, UnhandledActionCodeException
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from restclients.models.sws import Term, Section
 from dateutil.parser import parse as date_parse
-
-
-class UnhandledActionCodeException(Exception):
-    pass
 
 
 class Enrollment(EventBase):

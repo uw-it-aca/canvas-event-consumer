@@ -34,3 +34,10 @@ class InstructorLog(models.Model):
     """
     minute = models.IntegerField(default=0)
     event_count = models.SmallIntegerField(default=0)
+
+
+class PersonLog(models.Model):
+    """ Record Person Change Event Frequency
+    """
+    minute = models.IntegerField(default=0)
+    event_count = models.SmallIntegerField(default=0)
