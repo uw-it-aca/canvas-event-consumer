@@ -44,7 +44,7 @@ class Person(EventBase):
                                   uwnetid=net_id,
                                   first_name=current['FirstName'],
                                   surname=current['LastName'],
-                                  full_name=current['StudentName']),
+                                  display_name=current['StudentName']),
                       priority=PRIORITY_IMMEDIATE)
 
     def record_success(self, event_count):
