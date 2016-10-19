@@ -2,7 +2,7 @@ from events.event import EventBase
 from events.models import PersonLog
 from restclients.models.sws import PersonModel
 from sis_provisioner.loader import load_user
-from sis_provisioner.models import PRIORITY_IMMEDIATE
+from sis_provisioner.models import PRIORITY_HIGH
 from events.exceptions import EventException
 
 
@@ -45,7 +45,7 @@ class Person(EventBase):
                                   first_name=current['FirstName'],
                                   surname=current['LastName'],
                                   display_name=current['StudentName']),
-                      priority=PRIORITY_IMMEDIATE)
+                      priority=PRIORITY_HIGH)
 
     def record_success(self, event_count):
         self.record_success_to_log(PersonLog, event_count)
