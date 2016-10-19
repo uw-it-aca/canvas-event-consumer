@@ -1,6 +1,7 @@
-from events.event import EventBase, EventException
+from events.event import EventBase
 from events.models import PersonLog
-from sis_provisioner.models import User as UserModel
+from restclients.models.sws import PersonModel
+from sis_provisioner.loader import load_user
 from sis_provisioner.models import PRIORITY_IMMEDIATE
 from events.exceptions import EventException
 
@@ -39,14 +40,12 @@ class Person(EventBase):
            current['LastName'] != previous['LastName'] or \
            current['UWNetID'] != previous['UWNetID'] or \
            current['RegID'] != previous['RegID']:
-            try:
-                user = UserModel.objects.get(net_id=net_id)
-                user.priority = PRIORITY_IMMEDIATE
-            except UserModel.DoesNotExist:
-                user = UserModel(net_id=net_id,
-                                 reg_id=current['RegID'],
-                                 priority=PRIORITY_IMMEDIATE)
-            user.save()
+            load_user(PersonModel(uwregid=current['RegID'],
+                                  uwnetid=net_id,
+                                  first_name=current['FirstName'],
+                                  surname=current['LastName'],
+                                  full_name=current['StudentName']),
+                      priority=PRIORITY_IMMEDIATE)
 
     def record_success(self, event_count):
         self.record_success_to_log(PersonLog, event_count)
