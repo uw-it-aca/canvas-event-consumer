@@ -1,6 +1,7 @@
 from logging import getLogger
 from sis_provisioner.loader import Loader
 from sis_provisioner.cache import RestClientsCache
+from events.exceptions import EventException
 from restclients.kws import KWS
 from restclients.exceptions import DataFailureException
 from aws_message.crypto import aes128cbc, Signature, CryptoException
@@ -9,10 +10,6 @@ from time import time
 from math import floor
 import json
 import re
-
-
-class EventException(Exception):
-    pass
 
 
 class EventBase(object):
