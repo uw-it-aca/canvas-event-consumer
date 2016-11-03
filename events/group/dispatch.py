@@ -4,7 +4,7 @@ from django.conf import settings
 from logging import getLogger
 from django.utils.timezone import utc
 from sis_provisioner.dao.user import valid_net_id, valid_gmail_id
-from sis_provisioner.dao.group import get_effective_members
+from sis_provisioner.dao.group import get_effective_members, is_member
 from sis_provisioner.dao.course import group_section_sis_id,\
     valid_academic_course_sis_id
 from sis_provisioner.dao.canvas import get_sis_enrollments_for_user_in_course
@@ -18,7 +18,6 @@ from sis_provisioner.models import User as UserModel
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.models import PRIORITY_NONE, PRIORITY_DEFAULT,\
     PRIORITY_HIGH, PRIORITY_IMMEDIATE
-from restclients.gws import GWS
 from restclients.exceptions import DataFailureException
 from events.group.extract import ExtractUpdate, ExtractDelete, ExtractChange
 
@@ -86,7 +85,6 @@ class UWGroupDispatch(Dispatch):
     """
     def __init__(self, config, message):
         super(UWGroupDispatch, self).__init__(config, message)
-        self._gws = GWS()
         self._valid_members = []
 
     def mine(self, group):
@@ -255,9 +253,8 @@ class UWGroupDispatch(Dispatch):
 
     def _user_in_member_group(self, group, member):
         if self._has_member_groups(group):
-            self._gws.actas = group.added_by
-            return self._gws.is_effective_member(group.group_id, member.name)
-
+            return is_member(
+                group.group_id, member.name, act_as=group.added_by)
         return False
 
     def _user_in_course(self, group, member):
