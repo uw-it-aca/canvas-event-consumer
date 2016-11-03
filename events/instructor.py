@@ -30,7 +30,7 @@ class InstructorEventBase(EventBase):
                 section_data['Term']['Year'], section_data['Term']['Quarter'])
             current_term = get_term_by_date(datetime.now().date())
         except DataFailureException as err:
-            self._log.info('FAILED to get term data: %s' %err)
+            self._log.info('FAILED to get term data: %s' % err)
             return
 
         if term != current_term and \
