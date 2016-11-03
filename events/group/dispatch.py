@@ -7,6 +7,7 @@ from sis_provisioner.dao.user import valid_net_id, valid_gmail_id
 from sis_provisioner.dao.group import get_effective_members
 from sis_provisioner.dao.course import group_section_sis_id,\
     valid_academic_course_sis_id
+from sis_provisioner.dao.canvas import get_sis_enrollments_for_user_in_course
 from sis_provisioner.exceptions import UserPolicyException,\
     GroupPolicyException, GroupNotFoundException, GroupUnauthorizedException,\
     CoursePolicyException
@@ -18,7 +19,6 @@ from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.models import PRIORITY_NONE, PRIORITY_DEFAULT,\
     PRIORITY_HIGH, PRIORITY_IMMEDIATE
 from restclients.gws import GWS
-from restclients.canvas.enrollments import Enrollments
 from restclients.exceptions import DataFailureException
 from events.group.extract import ExtractUpdate, ExtractDelete, ExtractChange
 
@@ -86,7 +86,6 @@ class UWGroupDispatch(Dispatch):
     """
     def __init__(self, config, message):
         super(UWGroupDispatch, self).__init__(config, message)
-        self._enrollments = Enrollments()
         self._gws = GWS()
         self._valid_members = []
 
@@ -283,14 +282,13 @@ class UWGroupDispatch(Dispatch):
 
         # inspect Canvas Enrollments
         try:
-            params = {'user_id': self._enrollments.sis_user_id(user.reg_id)}
-            for e in self._enrollments.get_enrollments_for_course_by_sis_id(
-                    group.course_id, params=params):
-                if e.sis_section_id != group_section_sis_id(group.course_id):
-                    return True
+            canvas_enrollments = get_sis_enrollments_for_user_in_course(
+                user.reg_id, group.course_id)
+            if len(canvas_enrollments):
+                return True
         except DataFailureException as err:
             if err.status == 404:
-                pass            # No enrollment
+                pass  # No enrollment
             else:
                 raise
 
