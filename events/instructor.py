@@ -1,5 +1,5 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
-from sis_provisioner.policy import CoursePolicy
+from sis_provisioner.dao.course import is_time_schedule_construction
 from events.event import EventBase
 from events.models import InstructorLog
 from events.exceptions import EventException
@@ -43,7 +43,7 @@ class InstructorEventBase(EventBase):
             section_id=section_data['SectionID'],
             is_independent_study=section_data['IndependentStudy'])
 
-        if CoursePolicy().is_time_schedule_construction(section):
+        if is_time_schedule_construction(section):
             self._log_tsc_ignore(section.canvas_section_sis_id())
             return
 
