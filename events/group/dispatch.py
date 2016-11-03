@@ -3,10 +3,14 @@ import datetime
 from django.conf import settings
 from logging import getLogger
 from django.utils.timezone import utc
-from sis_provisioner.policy import UserPolicy, UserPolicyException
-from sis_provisioner.policy import GroupPolicy, GroupPolicyException,\
-    GroupNotFoundException, GroupUnauthorizedException
-from sis_provisioner.policy import CoursePolicy, CoursePolicyException
+from sis_provisioner.dao.user import valid_net_id, valid_gmail_id
+from sis_provisioner.dao.group import get_effective_members, is_member
+from sis_provisioner.dao.course import group_section_sis_id,\
+    valid_academic_course_sis_id
+from sis_provisioner.dao.canvas import get_sis_enrollments_for_user_in_course
+from sis_provisioner.exceptions import UserPolicyException,\
+    GroupPolicyException, GroupNotFoundException, GroupUnauthorizedException,\
+    CoursePolicyException
 from sis_provisioner.models import Group as GroupModel
 from sis_provisioner.models import CourseMember as CourseMemberModel
 from sis_provisioner.models import GroupMemberGroup as GroupMemberGroupModel
@@ -14,8 +18,6 @@ from sis_provisioner.models import User as UserModel
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.models import PRIORITY_NONE, PRIORITY_DEFAULT,\
     PRIORITY_HIGH, PRIORITY_IMMEDIATE
-from restclients.gws import GWS
-from restclients.canvas.enrollments import Enrollments
 from restclients.exceptions import DataFailureException
 from events.group.extract import ExtractUpdate, ExtractDelete, ExtractChange
 
@@ -83,11 +85,6 @@ class UWGroupDispatch(Dispatch):
     """
     def __init__(self, config, message):
         super(UWGroupDispatch, self).__init__(config, message)
-        self._enrollments = Enrollments()
-        self._user_policy = UserPolicy()
-        self._group_policy = GroupPolicy()
-        self._course_policy = CoursePolicy()
-        self._gws = GWS()
         self._valid_members = []
 
     def mine(self, group):
@@ -175,7 +172,10 @@ class UWGroupDispatch(Dispatch):
         elif member.is_uwnetid() or member.is_eppn():
             try:
                 if member.name not in self._valid_members:
-                    self._user_policy.valid(member.name)
+                    if member.is_uwnetid():
+                        valid_net_id(member.name)
+                    elif member.is_eppn():
+                        valid_gmail_id(member.name)
                     self._valid_members.append(member.name)
 
                 self._update_group_member(group, member, is_deleted)
@@ -188,9 +188,8 @@ class UWGroupDispatch(Dispatch):
     def _update_group_member_group(self, group, member_group, is_deleted):
         try:
             # validity is confirmed by act_as
-            (valid, invalid, member_groups) = \
-                self._group_policy.get_effective_members(
-                    member_group, act_as=group.added_by)
+            (valid, invalid, member_groups) = get_effective_members(
+                member_group, act_as=group.added_by)
         except GroupNotFoundException as err:
             GroupMemberGroupModel.objects \
                                  .filter(group_id=member_group) \
@@ -216,7 +215,7 @@ class UWGroupDispatch(Dispatch):
         if member.is_uwnetid():
             user_id = member.name
         elif member.is_eppn():
-            user_id = self._user_policy.valid_gmail_id(member.name)
+            user_id = valid_gmail_id(member.name)
         else:
             return
 
@@ -254,15 +253,14 @@ class UWGroupDispatch(Dispatch):
 
     def _user_in_member_group(self, group, member):
         if self._has_member_groups(group):
-            self._gws.actas = group.added_by
-            return self._gws.is_effective_member(group.group_id, member.name)
-
+            return is_member(
+                group.group_id, member.name, act_as=group.added_by)
         return False
 
     def _user_in_course(self, group, member):
         # academic course?
         try:
-            self._course_policy.valid_academic_course_sis_id(group.course_id)
+            valid_academic_course_sis_id(group.course_id)
         except CoursePolicyException:
             return False
 
@@ -281,15 +279,13 @@ class UWGroupDispatch(Dispatch):
 
         # inspect Canvas Enrollments
         try:
-            params = {'user_id': self._enrollments.sis_user_id(user.reg_id)}
-            for e in self._enrollments.get_enrollments_for_course_by_sis_id(
-                    group.course_id, params=params):
-                if e.sis_section_id != \
-                   self._course_policy.group_section_sis_id(group.course_id):
-                    return True
+            canvas_enrollments = get_sis_enrollments_for_user_in_course(
+                user.reg_id, group.course_id)
+            if len(canvas_enrollments):
+                return True
         except DataFailureException as err:
             if err.status == 404:
-                pass            # No enrollment
+                pass  # No enrollment
             else:
                 raise
 
