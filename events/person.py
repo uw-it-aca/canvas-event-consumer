@@ -1,6 +1,6 @@
 from events.event import EventBase
 from events.models import PersonLog
-from restclients.models.sws import PersonModel
+from restclients.models.sws import Person as PersonModel
 from sis_provisioner.loader import load_user
 from sis_provisioner.models import PRIORITY_HIGH
 from events.exceptions import EventException

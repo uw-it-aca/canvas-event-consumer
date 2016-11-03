@@ -1,12 +1,14 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
-from sis_provisioner.policy import CoursePolicy
+from sis_provisioner.dao.course import is_time_schedule_construction
+from sis_provisioner.dao.term import get_term_by_year_and_quarter,\
+    get_term_by_date
 from events.event import EventBase
 from events.models import InstructorLog
 from events.exceptions import EventException
 from restclients.models.sws import Section
-from restclients.sws.term import get_current_term, get_term_by_year_and_quarter
+from restclients.exceptions import DataFailureException
 from dateutil.parser import parse as date_parse
-from datetime import date
+from datetime import datetime
 
 
 class InstructorEventBase(EventBase):
@@ -21,12 +23,15 @@ class InstructorEventBase(EventBase):
         if not section_data:
             section_data = event['Previous']
 
-        term = get_term_by_year_and_quarter(
-            section_data['Term']['Year'],
-            section_data['Term']['Quarter'])
-
         course_data = section_data['Course']
-        current_term = get_current_term()
+
+        try:
+            term = get_term_by_year_and_quarter(
+                section_data['Term']['Year'], section_data['Term']['Quarter'])
+            current_term = get_term_by_date(datetime.now().date())
+        except DataFailureException as err:
+            self._log.info('FAILED to get term data: %s' % err)
+            return
 
         if term != current_term and \
                 term.first_day_quarter < current_term.first_day_quarter:
@@ -43,7 +48,7 @@ class InstructorEventBase(EventBase):
             section_id=section_data['SectionID'],
             is_independent_study=section_data['IndependentStudy'])
 
-        if CoursePolicy().is_time_schedule_construction(section):
+        if is_time_schedule_construction(section):
             self._log_tsc_ignore(section.canvas_section_sis_id())
             return
 
