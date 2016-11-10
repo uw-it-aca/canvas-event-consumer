@@ -194,11 +194,11 @@ class UWGroupDispatch(Dispatch):
             GroupMemberGroupModel.objects \
                                  .filter(group_id=member_group) \
                                  .update(is_deleted=True)
-            self._log.error("Member group %s NOT in %s" % (
+            self._log.info("Member group %s NOT in %s" % (
                 member_group, group.group_id))
             return
         except (GroupPolicyException, GroupUnauthorizedException) as err:
-            self._log.error(err)
+            self._log.info(err)
             return
 
         for member in valid:
