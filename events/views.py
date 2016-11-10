@@ -3,7 +3,7 @@ from calendar import timegm
 from math import floor
 import dateutil.parser
 from sis_provisioner.views.rest_dispatch import RESTDispatch
-from events.models import EnrollmentLog, GroupLog, InstructorLog
+from events.models import EnrollmentLog, GroupLog, InstructorLog, PersonLog
 import json
 
 
@@ -46,14 +46,15 @@ class EventListView(RESTDispatch):
 
                 if event_type == 'enrollment':
                     event_log = EnrollmentLog.objects.filter(
-                        minute__gte=start_sample
-                    )
+                        minute__gte=start_sample)
                 elif event_type == 'instructor':
                     event_log = InstructorLog.objects.filter(
-                        minute__gte=start_sample
-                    )
+                        minute__gte=start_sample)
                 elif event_type == 'group':
                     event_log = GroupLog.objects.filter(
+                        minute__gte=start_sample)
+                elif event_type == 'person':
+                    event_log = PersonLog.objects.filter(
                         minute__gte=start_sample)
                 else:
                     raise Exception('unknown event type %s' % event_type)
