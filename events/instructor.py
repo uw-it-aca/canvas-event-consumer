@@ -40,7 +40,7 @@ class InstructorEventBase(EventBase):
                     course_data['CurriculumAbbreviation'],
                     course_data['CourseNumber'],
                     section_data['SectionID']))
-                return
+            return
 
         section = Section(
             term=term,
