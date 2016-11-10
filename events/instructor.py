@@ -1,7 +1,7 @@
 from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.dao.course import is_time_schedule_construction
 from sis_provisioner.dao.term import get_term_by_year_and_quarter,\
-    get_term_by_date, get_term_after
+    get_all_active_terms
 from events.event import EventBase
 from events.models import InstructorLog
 from events.exceptions import EventException
@@ -28,27 +28,19 @@ class InstructorEventBase(EventBase):
         try:
             term = get_term_by_year_and_quarter(
                 section_data['Term']['Year'], section_data['Term']['Quarter'])
-            current_term = get_term_by_date(datetime.now().date())
-            end_term = get_term_after(get_term_after(current_term))
+            active_terms = get_all_active_terms(datetime.now())
         except DataFailureException as err:
             self._log.info('FAILED to get term data: %s' % err)
             return
 
-        if term != current_term:
-            if term.first_day_quarter < current_term.first_day_quarter:
-                self._log.info('SKIP previous section %s-%s-%s-%s' % (
+        if term not in active_terms:
+            self._log.info(
+                'SKIP instructor event for inactive section %s-%s-%s-%s' % (
                     term.canvas_sis_id(),
                     course_data['CurriculumAbbreviation'],
                     course_data['CourseNumber'],
                     section_data['SectionID']))
-                return
-            elif term.first_day_quarter > end_term.first_day_quarter:
-                self._log.info('SKIP future section %s-%s-%s-%s' % (
-                    term.canvas_sis_id(),
-                    course_data['CurriculumAbbreviation'],
-                    course_data['CourseNumber'],
-                    section_data['SectionID']))
-                return
+            return
 
         section = Section(
             term=term,
