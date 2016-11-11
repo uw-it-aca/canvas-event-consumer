@@ -6,6 +6,9 @@ from sis_provisioner.models import PRIORITY_HIGH
 from events.exceptions import EventException
 
 
+log_prefix = 'PERSON:'
+
+
 class Person(EventBase):
     """
     Collects Person Change Event described by
@@ -29,7 +32,8 @@ class Person(EventBase):
         previous = event['Previous']
         net_id = current['UWNetID'] if current else previous['UWNetID']
         if not net_id:
-            self._log.info('PERSON NULL UWNetID: %s' % (
+            self._log.info('%s IGNORE missing uwnetid for %s' % (
+                log_prefix,
                 current['RegID'] if current else previous['RegID']))
             return
 
