@@ -1,5 +1,5 @@
 from logging import getLogger
-from sis_provisioner.models import Enrollments
+from sis_provisioner.models import Enrollment
 from sis_provisioner.cache import RestClientsCache
 from events.exceptions import EventException
 from restclients.kws import KWS
