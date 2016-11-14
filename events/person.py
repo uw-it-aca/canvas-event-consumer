@@ -1,9 +1,11 @@
 from events.event import EventBase
 from events.models import PersonLog
 from restclients.models.sws import Person as PersonModel
-from sis_provisioner.loader import load_user
-from sis_provisioner.models import PRIORITY_HIGH
+from sis_provisioner.models import User, PRIORITY_HIGH
 from events.exceptions import EventException
+
+
+log_prefix = 'PERSON:'
 
 
 class Person(EventBase):
@@ -29,23 +31,21 @@ class Person(EventBase):
         previous = event['Previous']
         net_id = current['UWNetID'] if current else previous['UWNetID']
         if not net_id:
-            self._log.info('PERSON NULL UWNetID: %s' % (
+            self._log.info('%s IGNORE missing uwnetid for %s' % (
+                log_prefix,
                 current['RegID'] if current else previous['RegID']))
             return
 
         # Preferred name, net_id or reg_id change?
-        if not (previous and current) or \
-           current['StudentName'] != previous['StudentName'] or \
-           current['FirstName'] != previous['FirstName'] or \
-           current['LastName'] != previous['LastName'] or \
-           current['UWNetID'] != previous['UWNetID'] or \
-           current['RegID'] != previous['RegID']:
-            load_user(PersonModel(uwregid=current['RegID'],
-                                  uwnetid=net_id,
-                                  first_name=current['FirstName'],
-                                  surname=current['LastName'],
-                                  display_name=current['StudentName']),
-                      priority=PRIORITY_HIGH)
+        if (not (previous and current) or
+                current['StudentName'] != previous['StudentName'] or
+                current['FirstName'] != previous['FirstName'] or
+                current['LastName'] != previous['LastName'] or
+                current['UWNetID'] != previous['UWNetID'] or
+                current['RegID'] != previous['RegID']):
+            User.objects.add_user(PersonModel(uwregid=current['RegID'],
+                                              uwnetid=net_id),
+                                  priority=PRIORITY_HIGH)
 
     def record_success(self, event_count):
         self.record_success_to_log(PersonLog, event_count)

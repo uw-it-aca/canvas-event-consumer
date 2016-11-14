@@ -6,6 +6,9 @@ from restclients.models.sws import Term, Section
 from dateutil.parser import parse as date_parse
 
 
+log_prefix = 'ENROLLMENT:'
+
+
 class Enrollment(EventBase):
     """
     Collects enrollment event described by
@@ -71,7 +74,8 @@ class Enrollment(EventBase):
 
                 enrollments.append(data)
             except UnhandledActionCodeException:
-                self._log.warning("Got %s for %s at %s" % (
+                self._log.warning("%s UNKNOWN %s for %s at %s" % (
+                    log_prefix,
                     event['Action']['Code'],
                     event['Person']['UWRegID'],
                     event['LastModified']))
@@ -92,7 +96,8 @@ class Enrollment(EventBase):
             return EnrollmentModel.ACTIVE_STATUS
 
         if action_code == 'S':
-            self._log.debug("Add standby %s to %s" % (
+            self._log.debug("%s ADD standby %s to %s" % (
+                log_prefix,
                 event['Person']['UWRegID'],
                 section.canvas_section_sis_id()))
             return EnrollmentModel.ACTIVE_STATUS

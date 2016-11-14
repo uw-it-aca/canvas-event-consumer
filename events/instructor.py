@@ -11,6 +11,9 @@ from dateutil.parser import parse as date_parse
 from datetime import datetime
 
 
+log_prefix = 'INSTRUCTOR:'
+
+
 class InstructorEventBase(EventBase):
     def process_events(self, event):
         self._previous_instructors = self._instructors_from_section_json(
@@ -30,12 +33,13 @@ class InstructorEventBase(EventBase):
                 section_data['Term']['Year'], section_data['Term']['Quarter'])
             active_terms = get_all_active_terms(datetime.now())
         except DataFailureException as err:
-            self._log.info('FAILED to get term data: %s' % err)
+            self._log.info('%s ERROR get term: %s' % (log_prefix, err))
             return
 
         if term not in active_terms:
             self._log.info(
-                'SKIP instructor event for inactive section %s-%s-%s-%s' % (
+                '%s IGNORE inactive section %s-%s-%s-%s' % (
+                    log_prefix,
                     term.canvas_sis_id(),
                     course_data['CurriculumAbbreviation'],
                     course_data['CourseNumber'],
@@ -128,11 +132,13 @@ class InstructorEventBase(EventBase):
                             person.append('[%s] = "%s"' % (k, v))
 
                         course_data = section['Course']
-                        self._log.info('NULL_REG_ID: %s-%s-%s: %s' % (
-                            course_data['CurriculumAbbreviation'],
-                            course_data['CourseNumber'],
-                            section['SectionID'],
-                            ', '.join(person)))
+                        self._log.info(
+                            '%s IGNORE missing regid for %s-%s-%s: %s' % (
+                                log_prefix,
+                                course_data['CurriculumAbbreviation'],
+                                course_data['CourseNumber'],
+                                section['SectionID'],
+                                ', '.join(person)))
 
         return instructors.keys()
 
@@ -159,7 +165,8 @@ class InstructorAdd(InstructorEventBase):
         self.load_enrollments(enrollments)
 
     def _log_tsc_ignore(self, section_id):
-        self._log.info("IGNORE ADD: TSC on for %s" % (section_id))
+        self._log.info("%s IGNORE add TSC on for %s" % (
+            log_prefix, section_id))
 
 
 class InstructorDrop(InstructorEventBase):
@@ -181,4 +188,5 @@ class InstructorDrop(InstructorEventBase):
         self.load_enrollments(enrollments)
 
     def _log_tsc_ignore(self, section_id):
-        self._log.info("IGNORE DROP: TSC on for %s" % (section_id))
+        self._log.info("%s IGNORE drop TSC on for %s" % (
+            log_prefix, section_id))
