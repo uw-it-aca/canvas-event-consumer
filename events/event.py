@@ -1,5 +1,5 @@
 from logging import getLogger
-from sis_provisioner.loader import Loader
+from sis_provisioner.models import Enrollments
 from sis_provisioner.cache import RestClientsCache
 from events.exceptions import EventException
 from restclients.kws import KWS
@@ -143,10 +143,9 @@ class EventBase(object):
     def load_enrollments(self, enrollments):
         enrollment_count = len(enrollments)
         if enrollment_count:
-            loader = Loader()
             for enrollment in enrollments:
                 try:
-                    loader.load_enrollment(enrollment)
+                    Enrollment.objects.add_enrollment(enrollment)
                 except Exception as err:
                     raise EventException('Load enrollment failed: %s' % (err))
 
