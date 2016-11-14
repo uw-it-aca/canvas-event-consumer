@@ -22,13 +22,15 @@ from restclients.exceptions import DataFailureException
 from events.group.extract import ExtractUpdate, ExtractDelete, ExtractChange
 
 
+log_prefix = 'GROUP:'
+
+
 class Dispatch(object):
     """
     Base class for dispatching on actions within a UW GWS Event
     """
     def __init__(self, config, message):
         self._log = getLogger(__name__)
-
         self._settings = config
         self._message = message
 
@@ -46,36 +48,38 @@ class Dispatch(object):
                 'no-action': self.no_action
             }[action](group)
         except KeyError:
-            self._log.info('UNKNOWN ACTION "%s" on "%s"' % (action, group))
+            self._log.info('%s UNKNOWN %s for %s' % (
+                log_prefix, action, group))
             return 0
 
     def update_members(self, group_id):
         # event = ExtractUpdate(self._settings, self._message).extract()
-        self._log.info('ignoring update-members: %s' % group_id)
+        self._log.info('%s IGNORE update-members for %s' % (
+            log_prefix, group_id))
         return 0
 
     def put_group(self, group_id):
         # event = ExtractPutGroup(self._settings, self._message).extract()
-        self._log.info('ignoring put-group: %s' % group_id)
+        self._log.info('%s IGNORE put-group %s' % (log_prefix, group_id))
         return 0
 
     def delete_group(self, group_id):
         # event = ExtractDelete(self._settings, self._message).extract()
-        self._log.info('ignoring delete-group: %s' % group_id)
+        self._log.info('%s IGNORE delete-group %s' % (log_prefix, group_id))
         return 0
 
     def put_members(self, group_id):
         # event = ExtractPutMembers(self._settings, self._message).extract()
-        self._log.info('ignoring put-members: %s' % group_id)
+        self._log.info('%s IGNORE put-members for %s' % (log_prefix, group_id))
         return 0
 
     def change_subject_name(self, group_id):
         # event = ExtractChange(self._settings, self._message).extract()
-        self._log.info('ignoring change-subject-name: %s' % group_id)
+        self._log.info('%s IGNORE change-subject-name for %s' % (
+            log_prefix, group_id))
         return 0
 
     def no_action(self, group_id):
-        self._log.info('no-action')
         return 0
 
 
@@ -97,7 +101,8 @@ class UWGroupDispatch(Dispatch):
         # body contains list of members to be added or removed
         event = ExtractUpdate(self._settings, self._message).extract()
 
-        self._log.info('update_members: "%s"' % (event.group_id))
+        self._log.info('%s UPDATE membership for %s' % (
+            log_prefix, event.group_id))
         updates = [{
             'members': event.add_members,
             'is_deleted': None
@@ -124,7 +129,7 @@ class UWGroupDispatch(Dispatch):
 
     def delete_group(self, group_id):
         event = ExtractDelete(self._settings, self._message).extract()
-        self._log.info('DELETE: "%s"' % (event.group_id))
+        self._log.info('%s DELETE %s' % (log_prefix, event.group_id))
 
         now = datetime.datetime.utcnow().replace(tzinfo=utc)
         # mark group as delete and ready for import
@@ -152,8 +157,8 @@ class UWGroupDispatch(Dispatch):
     def change_subject_name(self, group_id):
         event = ExtractChange(self._settings, self._message).extract()
 
-        self._log.info('change_subject_name: "%s" to "%s"' % (
-            event.old_name, event.new_name))
+        self._log.info('%s UPDATE change-subject-name %s to %s' % (
+            log_prefix, event.old_name, event.new_name))
 
         GroupModel.objects \
                   .filter(group_id=event.old_name) \
@@ -180,10 +185,11 @@ class UWGroupDispatch(Dispatch):
 
                 self._update_group_member(group, member, is_deleted)
             except UserPolicyException:
-                self._log.info('policy fail: %s' % (member.name))
+                self._log.info('%s IGNORE invalid user %s' % (
+                    log_prefix, member.name))
         else:
-            self._log.info('unused type %s (%s)' % (
-                member.member_type, member.name))
+            self._log.info('%s IGNORE member type %s (%s)' % (
+                log_prefix, member.member_type, member.name))
 
     def _update_group_member_group(self, group, member_group, is_deleted):
         try:
@@ -194,11 +200,12 @@ class UWGroupDispatch(Dispatch):
             GroupMemberGroupModel.objects \
                                  .filter(group_id=member_group) \
                                  .update(is_deleted=True)
-            self._log.info("Member group %s NOT in %s" % (
-                member_group, group.group_id))
+            self._log.info("%s REMOVED member group %s not in %s" % (
+                log_prefix, member_group, group.group_id))
             return
         except (GroupPolicyException, GroupUnauthorizedException) as err:
-            self._log.info(err)
+            self._log.info('%s IGNORE %s: %s' % (
+                log_prefix, group.group_id, err))
             return
 
         for member in valid:
@@ -227,9 +234,9 @@ class UWGroupDispatch(Dispatch):
             models = CourseMemberModel.objects.filter(
                 name=user_id, member_type=member.member_type,
                 course_id=group.course_id, role=group.role)
-            self._log.debug('MULTIPLE (%s): %s in %s as %s'
-                            % (len(models), user_id,
-                               group.course_id, group.role))
+            self._log.debug('%s MULTIPLE (%s): %s in %s as %s' % (
+                log_prefix, len(models), user_id, group.course_id,
+                group.role))
             cm = models[0]
             created = False
             for m in models[1:]:
@@ -247,8 +254,8 @@ class UWGroupDispatch(Dispatch):
         cm.priority = PRIORITY_DEFAULT if not cm.queue_id else PRIORITY_HIGH
         cm.save()
 
-        self._log.info('groups: %s %s to %s as %s' % (
-            'deleted' if is_deleted else 'active',
+        self._log.info('%s %s %s to %s as %s' % (
+            log_prefix, 'DELETED' if is_deleted else 'ACTIVE',
             user_id, group.course_id, group.role))
 
     def _user_in_member_group(self, group, member):
@@ -306,7 +313,8 @@ class ImportGroupDispatch(Dispatch):
 
     def update_members(self, group):
         # body contains list of members to be added or removed
-        self._log.info('ignoring Canvas user update: %s' % (group))
+        self._log.info('%s IGNORE canvas user update: %s' % (
+            log_prefix, group))
         return 0
 
 
@@ -333,10 +341,11 @@ class CourseGroupDispatch(Dispatch):
 
     def update_members(self, group):
         # body contains list of members to be added or removed
-        self._log.info('ignoring Course Group update: %s' % (
-            self._course_sis_id))
+        self._log.info('%s IGNORE course group update: %s' % (
+            log_prefix, self._course_sis_id))
         return 0
 
     def put_group(self, group_id):
-        self._log.info('ignoring Course Group put-group: %s' % group_id)
+        self._log.info('%s IGNORE course group put-group: %s' % (
+            log_prefix, group_id))
         return 0
