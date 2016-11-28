@@ -46,6 +46,7 @@ class Person(EventBase):
             User.objects.add_user(PersonModel(uwregid=current['RegID'],
                                               uwnetid=net_id),
                                   priority=PRIORITY_HIGH)
+            self.record_success(1)
 
     def record_success(self, event_count):
         self.record_success_to_log(PersonLog, event_count)
