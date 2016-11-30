@@ -44,11 +44,12 @@ class Person(EventBase):
                 current['UWNetID'] != previous['UWNetID'] or
                 current['RegID'] != previous['RegID']):
 
-            User.objects.update_priority(
+            user = User.objects.update_priority(
                 PersonModel(uwregid=current['RegID'], uwnetid=net_id),
                 PRIORITY_HIGH)
 
-            self.record_success(1)
+            if user is not None:
+                self.record_success(1)
 
     def record_success(self, event_count):
         self.record_success_to_log(PersonLog, event_count)
