@@ -43,9 +43,11 @@ class Person(EventBase):
                 current['LastName'] != previous['LastName'] or
                 current['UWNetID'] != previous['UWNetID'] or
                 current['RegID'] != previous['RegID']):
-            User.objects.add_user(PersonModel(uwregid=current['RegID'],
-                                              uwnetid=net_id),
-                                  priority=PRIORITY_HIGH)
+
+            User.objects.update_priority(
+                PersonModel(uwregid=current['RegID'], uwnetid=net_id),
+                PRIORITY_HIGH)
+
             self.record_success(1)
 
     def record_success(self, event_count):
