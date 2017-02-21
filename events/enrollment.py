@@ -1,8 +1,8 @@
 from events.event import EventBase
 from events.models import EnrollmentLog
 from events.exceptions import EventException, UnhandledActionCodeException
-from sis_provisioner.models import Enrollment as EnrollmentModel
 from restclients.models.sws import Term, Section
+from restclients.models.canvas import CanvasEnrollment
 from dateutil.parser import parse as date_parse
 
 
@@ -57,7 +57,7 @@ class Enrollment(EventBase):
             try:
                 data = {
                     'Section': section,
-                    'Role': EnrollmentModel.STUDENT_ROLE,
+                    'Role': CanvasEnrollment.STUDENT.replace('Enrollment', ''),
                     'UWRegID': event['Person']['UWRegID'],
                     'Status': self._enrollment_status(event, section),
                     'LastModified': date_parse(event['LastModified']),
@@ -67,7 +67,7 @@ class Enrollment(EventBase):
                 }
 
                 if 'Auditor' in event and event['Auditor']:
-                    data['Role'] = EnrollmentModel.AUDITOR_ROLE
+                    data['Role'] = 'Auditor'
 
                 if 'RequestDate' in event:
                     data['RequestDate'] = date_parse(event['RequestDate'])
@@ -93,16 +93,16 @@ class Enrollment(EventBase):
         action_code = event['Action']['Code'].upper()
 
         if action_code == 'A':
-            return EnrollmentModel.ACTIVE_STATUS
+            return CanvasEnrollment.STATUS_ACTIVE
 
         if action_code == 'S':
             self._log.debug("%s ADD standby %s to %s" % (
                 log_prefix,
                 event['Person']['UWRegID'],
                 section.canvas_section_sis_id()))
-            return EnrollmentModel.ACTIVE_STATUS
+            return CanvasEnrollment.STATUS_ACTIVE
 
         if action_code == 'D':
-            return EnrollmentModel.DELETED_STATUS
+            return CanvasEnrollment.STATUS_DELETED
 
         raise UnhandledActionCodeException()

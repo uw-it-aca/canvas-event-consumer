@@ -1,11 +1,11 @@
-from sis_provisioner.models import Enrollment as EnrollmentModel
 from sis_provisioner.dao.course import is_time_schedule_construction
-from sis_provisioner.dao.term import get_term_by_year_and_quarter,\
-    get_all_active_terms
+from sis_provisioner.dao.term import (
+    get_term_by_year_and_quarter, get_all_active_terms)
 from events.event import EventBase
 from events.models import InstructorLog
 from events.exceptions import EventException
 from restclients.models.sws import Section
+from restclients.models.canvas import CanvasEnrollment
 from restclients.exceptions import DataFailureException
 from dateutil.parser import parse as date_parse
 from datetime import datetime
@@ -101,7 +101,7 @@ class InstructorEventBase(EventBase):
         enrollments = []
         enrollment_data = {
             'Section': section,
-            'Role': EnrollmentModel.INSTRUCTOR_ROLE,
+            'Role': CanvasEnrollment.TEACHER.replace('Enrollment', ''),
             'Status': status,
             'LastModified': self._last_modified,
             'InstructorUWRegID': None
@@ -161,7 +161,7 @@ class InstructorAdd(InstructorEventBase):
         add = [reg_id for reg_id in self._current_instructors
                if reg_id not in self._previous_instructors]
         enrollments = self.enrollments(
-            add, EnrollmentModel.ACTIVE_STATUS, section)
+            add, CanvasEnrollment.STATUS_ACTIVE, section)
         self.load_enrollments(enrollments)
 
     def _log_tsc_ignore(self, section_id):
@@ -184,7 +184,7 @@ class InstructorDrop(InstructorEventBase):
         drop = [reg_id for reg_id in self._previous_instructors
                 if reg_id not in self._current_instructors]
         enrollments = self.enrollments(
-            drop, EnrollmentModel.DELETED_STATUS, section)
+            drop, CanvasEnrollment.STATUS_DELETED, section)
         self.load_enrollments(enrollments)
 
     def _log_tsc_ignore(self, section_id):
